@@ -41,7 +41,7 @@ branches = [
     "Jet_btagDeepFlavB"
 ]
 
-def create_chain_from_file_list(txt_file, branches, max_files=-1, folder, max_events=None):
+def create_chain_from_file_list(txt_file, branches, folder, max_files=-1, max_events=None):
     files = np.loadtxt(txt_file, dtype=str)
 
     files = [os.path.join(folder, os.path.basename(f)) for f in files]
