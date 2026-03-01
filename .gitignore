@@ -12,3 +12,6 @@
 
 # model
 *.h5
+
+# root files
+*.root
