@@ -1,10 +1,14 @@
-import numpy as np
-# from tensorflow.keras.models import load_model
-import uproot
+from src.analysis_utils import (
+    load_dataset,
+    build_electrons,
+    select_two_opposite_sign_same_flavour,
+    z_mass_numpy,
+    plot_hist
+)
 import awkward as ak
-import os 
-import vector
+import numpy as np
 import matplotlib.pyplot as plt
+# uproot.open.defaults["xrootd_handler"] = uproot.source.xrootd.XRootDSource
 
 txt_file = "data/real/CMS_Run2016H_DoubleEG_NANOAOD_UL2016_MiniAODv2_NanoAODv9-v1_100000_file_index.txt"
 
@@ -19,10 +23,8 @@ total_events = 85388673
 
 L_int = 8746231868.215154648 / 1e6; # pb^-1
 
-sigmaDY = 6422.0 # pb
-
-weight = (sigmaDY * L_int) / total_events
-
+sigmaDYhigh = 6422.0 # pb
+sigmaDYlow = 20480.0 # pb
 # model = load_model("results/electron_classifier.h5")
 
 branches = [
@@ -30,6 +32,8 @@ branches = [
     "Electron_eta",
     "Electron_phi",
     "Electron_mass",
+    "Electron_charge",
+    "genWeight",
     "Electron_miniPFRelIso_all",
     "Electron_miniPFRelIso_chg",
     "Electron_dz",
@@ -41,66 +45,64 @@ branches = [
     "Jet_btagDeepFlavB"
 ]
 
-def create_chain_from_file_list(txt_file, branches, folder, max_files=-1, max_events=None):
-    files = np.loadtxt(txt_file, dtype=str)
+mc_dy_low_data = load_dataset(mc_dy_low, branches, folder = mc_dy_signal_folder, max_files=1)
 
-    files = [os.path.join(folder, os.path.basename(f)) for f in files]
-    
-    if max_files != -1:
-        files = files[:max_files]
+mc_dy_high_data = load_dataset(mc_dy_high, branches, folder = mc_dy_signal_folder, max_files=1)
 
-    chain = uproot.concatenate(
-        [f"{f}:Events" for f in files],
-        expressions=branches,      
-        entry_stop=max_events,     
-        library="ak",               
-    )
-    
-    return chain
+# mc_dy_combined = ak.concatenate([mc_dy_low_data, mc_dy_high_data])
 
-tree = create_chain_from_file_list(
-    txt_file,
-    branches,
-    root_folder,
-    max_files=1
+# print("Total combined DY events:", len(mc_dy_combined))
+
+
+electrons_high = build_electrons(mc_dy_high_data)
+electrons_low = build_electrons(mc_dy_low_data)
+
+two_el_high = select_two_opposite_sign_same_flavour(mc_dy_high_data)
+two_el_low = select_two_opposite_sign_same_flavour(mc_dy_low_data)
+
+Z_ee_mass1 = z_mass_numpy(two_el_high)
+Z_ee_mass2 = z_mass_numpy(two_el_low)
+
+entry_events = ak.sum(two_el_high) + ak.sum(two_el_low)
+
+bins = np.array([40,45,50,55,60,64,68,72,76,81,86,91,96,101,106,110,
+                 115,120,126,133,141,150,160,171,185,200,220,243,273,
+                 320,380,440,510,600,700,830,1000,1500,2000,3000])
+
+# print(electrons["weight"])
+wsum = ak.sum(electrons_high["weight"])
+
+scale1 = (sigmaDYhigh * L_int) * (entry_events/total_events) / wsum
+
+wsum = ak.sum(electrons_low["weight"])
+
+scale2 = (sigmaDYlow * L_int) * (entry_events/total_events) / wsum
+
+two_el_high["weight"] = ak.fill_none(two_el_high["weight"], 1)
+event_weights = ak.to_numpy(two_el_high.weight[:,0])
+
+plot_hist(
+    Z_ee_mass1,
+    bins=bins,
+    weights=event_weights*scale1,
+    label = "Drell-Yan MC",
+    xlabel="Mass [GeV]",
+    title="Z → ee Invariant Mass",
+    logx=True,
+    logy=True
 )
 
+two_el_low["weight"] = ak.fill_none(two_el_low["weight"], 1)
+event_weights = ak.to_numpy(two_el_low.weight[:,0])
 
-mc_dy_high_tree = create_chain_from_file_list(
-    mc_dy_high,
-    branches,
-    mc_dy_signal_folder,
-    max_files=1
+plot_hist(
+    Z_ee_mass2,
+    bins=bins,
+    weights=event_weights*scale2,
+    label = "Drell-Yan MC",
+    xlabel="Mass [GeV]",
+    title="Z → ee Invariant Mass",
+    logx=True,
+    logy=True
 )
-
-mc_dy_low_data = create_chain_from_file_list(
-    mc_dy_low,
-    branches,
-    mc_dy_signal_folder,
-    max_files=1
-)
-
-mc_dy_combined = ak.concatenate([mc_dy_low_data, mc_dy_high_tree])
-print("Total combined DY events:", len(mc_dy_combined))
-
-if mc_dy_combined[ak.num(mc_dy_combined["Electron_pt"] >= 2)]:
-    v = vector.awk(
-        pt=tree["Electron_pt"],
-        eta=tree["Electron_eta"],
-        phi=tree["Electron_phi"],
-        mass=tree["Electron_mass"]  # or zeros
-    )
-
-    # invariant mass of first two electrons
-    m_inv = (v[:,0] + v[:,1]).mass
-
-
-# print(len(tree))  # number of events
-plt.figure(figsize=(8,6))
-plt.hist(m_inv, bins=50, range=(0,200), weights=weight, histtype='step', label="DY MC")
-plt.xlabel("Invariant mass [GeV]")
-plt.ylabel("Events (scaled to L_int)")
-plt.title("DY dilepton invariant mass")
-plt.legend()
-plt.grid(True)
 plt.show()
