@@ -38,7 +38,7 @@ def build_electrons(events):
     return electron
 
 def select_two_opposite_sign_same_flavour(leps):
-    mask_two = (ak.num(leps) == 2)
+    mask_two = (ak.num(leps.pt) == 2)
     leps2 = leps[mask_two]
     mask_os = leps2.charge[:,0] * leps2.charge[:,1] < 0
     
@@ -58,7 +58,7 @@ def z_mass_numpy(leps):
     return np.sqrt(EZ**2 - pxZ**2 - pyZ**2 - pzZ**2)
 
 def plot_hist(values, bins, xlabel, ylabel="Events", label = None, title=None, logx = False, logy = False, weights = None):
-    plt.figure(figsize=(7, 5))
+    # plt.figure(figsize=(7, 5))
     plt.hist(values, bins=bins, label = label, weights = weights, zorder = 10, color = 'r')
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)

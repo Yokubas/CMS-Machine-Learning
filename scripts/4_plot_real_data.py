@@ -49,7 +49,7 @@ mc_dy_low_data = load_dataset(mc_dy_low, branches, folder = mc_dy_signal_folder,
 
 mc_dy_high_data = load_dataset(mc_dy_high, branches, folder = mc_dy_signal_folder, max_files=1)
 
-# mc_dy_combined = ak.concatenate([mc_dy_low_data, mc_dy_high_data])
+mc_dy_combined = ak.concatenate([mc_dy_low_data, mc_dy_high_data])
 
 # print("Total combined DY events:", len(mc_dy_combined))
 
@@ -57,34 +57,34 @@ mc_dy_high_data = load_dataset(mc_dy_high, branches, folder = mc_dy_signal_folde
 electrons_high = build_electrons(mc_dy_high_data)
 electrons_low = build_electrons(mc_dy_low_data)
 
-two_el_high = select_two_opposite_sign_same_flavour(mc_dy_high_data)
-two_el_low = select_two_opposite_sign_same_flavour(mc_dy_low_data)
+two_el_high = select_two_opposite_sign_same_flavour(electrons_high)
+two_el_low = select_two_opposite_sign_same_flavour(electrons_low)
 
 Z_ee_mass1 = z_mass_numpy(two_el_high)
 Z_ee_mass2 = z_mass_numpy(two_el_low)
 
-entry_events = ak.sum(two_el_high) + ak.sum(two_el_low)
+entry_events = len(two_el_high) + len(two_el_low)
 
 bins = np.array([40,45,50,55,60,64,68,72,76,81,86,91,96,101,106,110,
                  115,120,126,133,141,150,160,171,185,200,220,243,273,
                  320,380,440,510,600,700,830,1000,1500,2000,3000])
 
-# print(electrons["weight"])
-wsum = ak.sum(electrons_high["weight"])
+weights_padded = ak.pad_none(electrons_high.weight, 1, axis=1)
+weights_filled = ak.fill_none(weights_padded, 0)
+
+event_weights1 = ak.firsts(weights_filled)
+
+wsum = ak.sum(event_weights1)
 
 scale1 = (sigmaDYhigh * L_int) * (entry_events/total_events) / wsum
+print(scale1)
 
-wsum = ak.sum(electrons_low["weight"])
-
-scale2 = (sigmaDYlow * L_int) * (entry_events/total_events) / wsum
-
-two_el_high["weight"] = ak.fill_none(two_el_high["weight"], 1)
-event_weights = ak.to_numpy(two_el_high.weight[:,0])
-
+weights_events = ak.firsts(two_el_high.weight)
+plt.figure(figsize=(7, 5))
 plot_hist(
     Z_ee_mass1,
     bins=bins,
-    weights=event_weights*scale1,
+    weights=weights_events*scale1,
     label = "Drell-Yan MC",
     xlabel="Mass [GeV]",
     title="Z → ee Invariant Mass",
@@ -92,14 +92,22 @@ plot_hist(
     logy=True
 )
 
-two_el_low["weight"] = ak.fill_none(two_el_low["weight"], 1)
-event_weights = ak.to_numpy(two_el_low.weight[:,0])
+weights_padded = ak.pad_none(electrons_low.weight, 1, axis=1)
+weights_filled = ak.fill_none(weights_padded, 0)
+
+# Now take the first element safely
+event_weights = ak.firsts(weights_filled)
+
+wsum = ak.sum(event_weights)
+
+scale2 = (sigmaDYlow * L_int) * (entry_events/total_events) / wsum
+weights_events = ak.firsts(two_el_low.weight)
 
 plot_hist(
     Z_ee_mass2,
     bins=bins,
-    weights=event_weights*scale2,
-    label = "Drell-Yan MC",
+    weights=weights_events*scale2,
+    # label = "Drell-Yan MC",
     xlabel="Mass [GeV]",
     title="Z → ee Invariant Mass",
     logx=True,
