@@ -10,17 +10,24 @@ project_root/
 │
 ├─ data/
 │ ├─ raw/ # Raw ROOT files listed in txt
-│ └─ processed/ # Preprocessed CSV dataset
+│ ├─ processed/ # Processed data ready for analysis
+│ └─ real/ # Real CMS experiment data
+│ 
+├─ cpp/
+│ ├─ Makefile
+│ └─ read_root.cpp
 │
 ├─ src/ # Python modules
 │ ├─ __init__.py
 │ ├─ preprocessing.py
-│ └─ plot_training.py
+│ ├─ plot_training.py
+│ └─ analysis_utils.py
 │
 ├─ scripts/ # Scripts for dataset prep, training, evaluation
 │ ├─ 1_prepare_dataset.py
 │ ├─ 2_train.py
-│ └─ 3_evaluate.py
+│ ├─ 3_evaluate.py
+│ └─ 4_plot_real_data.py
 │
 ├─ results/ # Trained models and plots
 │ ├─ electron_classifier.h5
@@ -37,16 +44,26 @@ project_root/
 
 **1. Clone the repository:**
 ``` bash
-git clone https://github.com/Yokubas/lecture_CERN_data_analysis_student_projects
-
-cd Jokubas_Maciulis
+git clone https://github.com/Yokubas/CMS-Machine-Learning
 ```
-**2. Create the Conda environment:**
+**2. Create the Conda environment for Python analysis:**
 ``` bash
 conda env create -f environment.yml
 conda activate cern_tf
 ```
+**3. For C++ workflow:**
 
+**1. Install Docker**
+
+Go to the [official Docker website](https://docs.docker.com/get-started/get-docker/) and follow the installation instructions for your operating system.
+
+**2. Run the ROOT Docker container**
+
+Open a terminal in the project folder (where you cloned the repository) and run:
+
+``` bash
+docker run -it --name my_root -P -p 5901:5901 -p 6080:6080 -v $PWD:/code gitlab-registry.cern.ch/cms-cloud/root-vnc:latest
+```
 ## Usage
 
 Run scripts from the project root using the ```-m``` flag to handle imports correctly:
