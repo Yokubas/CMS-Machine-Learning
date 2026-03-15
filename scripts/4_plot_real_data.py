@@ -8,7 +8,7 @@ from src.analysis_utils import (
 import awkward as ak
 import numpy as np
 import matplotlib.pyplot as plt
-from tensorflow.keras.models import load_model
+from tensorflow.keras.models import load_model # type: ignore
 import joblib
 
 model_file = "results/electron_classifier.h5"
@@ -30,34 +30,9 @@ L_int = 8746231868.215154648 / 1e6; # pb^-1
 sigmaDYhigh = 6422.0 # pb
 sigmaDYlow = 20480.0 # pb
 
-branches = [
-    "Electron_pt",
-    "Electron_eta",
-    "Electron_phi",
-    "Electron_mass",
-    "Electron_charge",
-    "genWeight",
-    "Electron_miniPFRelIso_all",
-    "Electron_miniPFRelIso_chg",
-    "Electron_dz",
-    "Electron_dxy",
-    "Electron_ip3d",
-    "Jet_pt",
-    "Jet_eta",
-    "Jet_phi",
-    "Jet_btagDeepFlavB"
-]
-
 events_real = load_dataset(real_data)
-electrons, _ = build_electrons(events_real)
+electrons_real, _ = build_electrons(events_real)
 
-plt.hist(z_mass_numpy(electrons), bins = np.array([40,45,50,55,60,64,68,72,76,81,86,91,96,101,106,110,
-                 115,120,126,133,141,150,160,171,185,200,220,243,273,
-                 320,380,440,510,600,700,830,1000,1500,2000,3000]))
-plt.xscale("log")
-plt.yscale("log")
-plt.savefig("results/real.png")
-plt.show()
 prepared = prepare_input(events_real)
 
 X_real = prepared.values
@@ -66,6 +41,7 @@ X_scaled = scaler.transform(X_real)  # <-- scale using the saved scaler
 y_pred = model.predict(X_scaled, batch_size=1024)  # choose batch_size to fit memory
 threshold = 0.8  # example cutoff
 selected_mask = y_pred.flatten() > threshold
+print(selected_mask)
 selected_events_real = events_real[selected_mask]
 electrons, _ = build_electrons(selected_events_real)
 Z_mass = z_mass_numpy(electrons)
@@ -73,6 +49,17 @@ Z_mass = z_mass_numpy(electrons)
 bins = np.array([40,45,50,55,60,64,68,72,76,81,86,91,96,101,106,110,
                  115,120,126,133,141,150,160,171,185,200,220,243,273,
                  320,380,440,510,600,700,830,1000,1500,2000,3000])
+plt.hist(z_mass_numpy(electrons_real), bins = np.array([40,45,50,55,60,64,68,72,76,81,86,91,96,101,106,110,
+                 115,120,126,133,141,150,160,171,185,200,220,243,273,
+                 320,380,440,510,600,700,830,1000,1500,2000,3000]), label = "Real Data")
+plt.hist(Z_mass, bins = np.array([40,45,50,55,60,64,68,72,76,81,86,91,96,101,106,110,
+                 115,120,126,133,141,150,160,171,185,200,220,243,273,
+                 320,380,440,510,600,700,830,1000,1500,2000,3000]), label = "Real Data (NN-selected)")
+plt.xscale("log")
+plt.yscale("log")
+plt.legend()
+plt.savefig("results/real.png")
+plt.show()
 
 mc_dy_low = load_dataset(root_file = mc_dy_low_data)
 
@@ -110,7 +97,7 @@ plot_hist(
     Z_mass, 
     bins=bins, 
     xlabel="Invariant Mass [GeV]",
-    label="Real data (NN-selected)",
+    label="Real Data (NN-selected)",
     title="Z → ee Invariant Mass",
     histtype="step",
     color = 'k',
