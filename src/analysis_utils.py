@@ -2,7 +2,7 @@ import uproot
 import awkward as ak
 import numpy as np
 import matplotlib.pyplot as plt
-
+import pandas as pd
 def load_dataset(root_file, max_events=None):
     
     file = uproot.open(root_file)
@@ -23,15 +23,8 @@ def build_electrons(events):
         },
         with_name="Momentum4D"
     )
-
-    return electron, events["genWeight"]
-
-# def select_two_opposite_sign_same_flavour(leps):
-#     mask_two = (ak.num(leps.pt) == 2)
-#     leps2 = leps[mask_two]
-#     mask_os = leps2.charge[:,0] * leps2.charge[:,1] < 0
-    
-#     return leps2[mask_os]
+    weights = events["genWeight"] if "genWeight" in events.fields else None
+    return electron, weights
 
 def z_mass_numpy(leps):
     # Convert to numpy
@@ -46,9 +39,36 @@ def z_mass_numpy(leps):
 
     return np.sqrt(EZ**2 - pxZ**2 - pyZ**2 - pzZ**2)
 
-def plot_hist(values, bins, xlabel, ylabel="Events", label = None, title=None, logx = False, logy = False, weights = None):
+def prepare_input(arr):
+    df = pd.DataFrame()
+
+    df["nElectron"] = ak.to_numpy(ak.count_nonzero(arr["Electron_pt"] > 0, axis=1))
+
+    padded_pt  = ak.pad_none(arr["Electron_pt"],  2)
+    padded_eta = ak.pad_none(arr["Electron_eta"], 2)
+
+    for i in range(2):
+        df[f"Electron{i+1}_pt"]  = ak.to_numpy(ak.fill_none(padded_pt[:,  i],  0))
+        df[f"Electron{i+1}_eta"] = ak.to_numpy(ak.fill_none(padded_eta[:, i], 0))
+
+    df["nJet"] = ak.to_numpy(ak.count_nonzero(arr["Jet_pt"] > 0, axis=1))
+    
+    padded_pt  = ak.pad_none(arr["Jet_pt"], 4)
+    padded_eta = ak.pad_none(arr["Jet_eta"], 4)
+    padded_phi = ak.pad_none(arr["Jet_phi"], 4)
+    padded_btag = ak.pad_none(arr["Jet_btagDeepFlavB"], 4)
+    
+    for i in range(4):
+        df[f"Jet{i+1}_pt"] = ak.to_numpy(ak.fill_none(padded_pt[:, i], 0))
+        df[f"Jet{i+1}_eta"] = ak.to_numpy(ak.fill_none(padded_eta[:, i], 0))
+        df[f"Jet{i+1}_phi"] = ak.to_numpy(ak.fill_none(padded_phi[:, i], 0))
+        df[f"Jet{i+1}_btag"] = ak.to_numpy(ak.fill_none(padded_btag[:, i], 0))
+
+    return df.reset_index(drop=True)
+
+def plot_hist(values, bins, xlabel, ylabel="Events", color = 'r', histtype= 'bar', label = None, title=None, logx = False, logy = False, weights = None):
     # plt.figure(figsize=(7, 5))
-    plt.hist(values, bins=bins, label = label, weights = weights, zorder = 10, color = 'r')
+    plt.hist(values, bins=bins, label = label, weights = weights, histtype = histtype, zorder = 10, color = color)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     if title:

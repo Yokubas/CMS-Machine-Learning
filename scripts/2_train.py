@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import tensorflow as tf
 from src.plot_training import plot_training_history, plot_auc
-
+import joblib
 # Load CSV dataset
 df = pd.read_csv("data/processed/electron_dataset.csv")
 
@@ -16,7 +16,14 @@ X = df.drop(columns = ["target"]).to_numpy()
 y = df["target"].to_numpy()
 
 # Scale features to mean 0 and std 1 for stable and efficient training (does not get biased towards larger numerical values)
-X = StandardScaler().fit_transform(X)
+
+scaler = StandardScaler()
+
+# Fit on training data and transform
+X = scaler.fit_transform(X)
+
+# Save the scaler for later use
+joblib.dump(scaler, "results/scaler.pkl")
 
 # Split into training and test sets
 X_train, X_test, y_train, y_test = train_test_split(
