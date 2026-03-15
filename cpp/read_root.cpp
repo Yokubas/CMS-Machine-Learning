@@ -162,25 +162,27 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
                 }    
             }
             
-            if (isMC) out_genWeight = genWeight;
-            
-        }
-
-        for (UInt_t j = 0; j < 4; j++) {
-            if(j < nJet){
-                out_Jet_pt[j] = Jet_pt[j];
-                out_Jet_eta[j] = Jet_eta[j];
-                out_Jet_phi[j] = Jet_phi[j];
-                out_Jet_btagDeepFlavB[j] = Jet_btagDeepFlavB[j];
-            }   else{
-                out_Jet_pt[j] = 0;
-                out_Jet_eta[j] = 0;
-                out_Jet_phi[j] = 0;
-                out_Jet_btagDeepFlavB[j] = 0;                
+            if (isMC){ 
+                out_genWeight = genWeight;
+                outTree->Fill();
             }
         }
-        
-        outTree->Fill();
+        if (!isMC){
+            for (UInt_t j = 0; j < 4; j++) {
+                if(j < nJet){
+                    out_Jet_pt[j] = Jet_pt[j];
+                    out_Jet_eta[j] = Jet_eta[j];
+                    out_Jet_phi[j] = Jet_phi[j];
+                    out_Jet_btagDeepFlavB[j] = Jet_btagDeepFlavB[j];
+                }   else{
+                    out_Jet_pt[j] = 0;
+                    out_Jet_eta[j] = 0;
+                    out_Jet_phi[j] = 0;
+                    out_Jet_btagDeepFlavB[j] = 0;                
+                }
+            }
+            outTree->Fill();
+        }
     }
 
     outFile->Write();
