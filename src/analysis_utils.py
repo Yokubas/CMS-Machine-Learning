@@ -2,23 +2,14 @@ import uproot
 import awkward as ak
 import numpy as np
 import matplotlib.pyplot as plt
-import os
 
-def load_dataset(txt_file, branches, folder, max_files=-1, max_events=None):
-    files = np.loadtxt(txt_file, dtype=str)
-
-    files = [os.path.join(folder, os.path.basename(f)) for f in files]
+def load_dataset(root_file, max_events=None):
     
-    if max_files != -1:
-        files = files[:max_files]
+    file = uproot.open(root_file)
+    tree = file["Events"]
+    data = tree.arrays(library = "ak", entry_stop = max_events)
 
-    chain = uproot.concatenate(
-        [f"{f}:Events" for f in files],
-        expressions=branches,      
-        entry_stop=max_events,     
-        library="ak",               
-    )
-    return chain
+    return data
 
 def build_electrons(events):
   
@@ -28,21 +19,19 @@ def build_electrons(events):
             "eta": events["Electron_eta"],
             "phi": events["Electron_phi"],
             "mass": events["Electron_mass"] if "Electron_mass" in events.fields else 0 * events["Electron_pt"],
-            "energy": np.sqrt(events["Electron_pt"]**2 * np.cosh(events["Electron_eta"])**2),
-            "charge": events["Electron_charge"],
-            "weight": events["genWeight"]
+            "energy": np.sqrt(events["Electron_pt"]**2 * np.cosh(events["Electron_eta"])**2), 
         },
         with_name="Momentum4D"
     )
 
-    return electron
+    return electron, events["genWeight"]
 
-def select_two_opposite_sign_same_flavour(leps):
-    mask_two = (ak.num(leps.pt) == 2)
-    leps2 = leps[mask_two]
-    mask_os = leps2.charge[:,0] * leps2.charge[:,1] < 0
+# def select_two_opposite_sign_same_flavour(leps):
+#     mask_two = (ak.num(leps.pt) == 2)
+#     leps2 = leps[mask_two]
+#     mask_os = leps2.charge[:,0] * leps2.charge[:,1] < 0
     
-    return leps2[mask_os]
+#     return leps2[mask_os]
 
 def z_mass_numpy(leps):
     # Convert to numpy

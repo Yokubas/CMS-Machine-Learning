@@ -1,25 +1,23 @@
 from src.analysis_utils import (
     load_dataset,
     build_electrons,
-    select_two_opposite_sign_same_flavour,
     z_mass_numpy,
     plot_hist
 )
 import awkward as ak
 import numpy as np
 import matplotlib.pyplot as plt
-# uproot.open.defaults["xrootd_handler"] = uproot.source.xrootd.XRootDSource
 
-txt_file = "data/real/CMS_Run2016H_DoubleEG_NANOAOD_UL2016_MiniAODv2_NanoAODv9-v1_100000_file_index.txt"
+# Using processed data files
+real_data = "data/processed/real/real.root"
 
-mc_dy_high = "data/raw/signal/CMS_mc_RunIISummer20UL16NanoAODv9_DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_30000_file_index.txt"
-mc_dy_low = "data/raw/signal/CMS_mc_RunIISummer20UL16NanoAODv9_DYJetsToLL_M-10to50_TuneCP5_13TeV-amcatnloFXFX-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_2520000_file_index.txt"
-
-root_folder = "data/real/"
-
-mc_dy_signal_folder = "data/raw/signal/"
+mc_dy_high_data = "data/processed/signal/mcDYhigh.root"
+mc_dy_low_data = "data/processed/signal/mcDYlow.root"
 
 total_events = 85388673 
+
+wsumHigh = 3.2887e+10
+wsumLow = 8.26117e+10
 
 L_int = 8746231868.215154648 / 1e6; # pb^-1
 
@@ -44,47 +42,23 @@ branches = [
     "Jet_phi",
     "Jet_btagDeepFlavB"
 ]
-
-mc_dy_low_data = load_dataset(mc_dy_low, branches, folder = mc_dy_signal_folder, max_files=1)
-
-mc_dy_high_data = load_dataset(mc_dy_high, branches, folder = mc_dy_signal_folder, max_files=1)
-
-mc_dy_combined = ak.concatenate([mc_dy_low_data, mc_dy_high_data])
-
-# print("Total combined DY events:", len(mc_dy_combined))
-
-
-electrons_high = build_electrons(mc_dy_high_data)
-electrons_low = build_electrons(mc_dy_low_data)
-
-two_el_high = select_two_opposite_sign_same_flavour(electrons_high)
-two_el_low = select_two_opposite_sign_same_flavour(electrons_low)
-
-Z_ee_mass1 = z_mass_numpy(two_el_high)
-Z_ee_mass2 = z_mass_numpy(two_el_low)
-
-entry_events = len(two_el_high) + len(two_el_low)
-
 bins = np.array([40,45,50,55,60,64,68,72,76,81,86,91,96,101,106,110,
                  115,120,126,133,141,150,160,171,185,200,220,243,273,
                  320,380,440,510,600,700,830,1000,1500,2000,3000])
 
-weights_padded = ak.pad_none(electrons_high.weight, 1, axis=1)
-weights_filled = ak.fill_none(weights_padded, 0)
+mc_dy_low = load_dataset(root_file = mc_dy_low_data)
 
-event_weights1 = ak.firsts(weights_filled)
+electrons_low, weights_low = build_electrons(mc_dy_low)
 
-wsum = ak.sum(event_weights1)
+Z_ee_mass_low = z_mass_numpy(electrons_low)
+entry_events = len(electrons_low)
+scale = (sigmaDYlow * L_int) * (entry_events/total_events) / wsumLow
 
-scale1 = (sigmaDYhigh * L_int) * (entry_events/total_events) / wsum
-print(scale1)
-
-weights_events = ak.firsts(two_el_high.weight)
 plt.figure(figsize=(7, 5))
 plot_hist(
-    Z_ee_mass1,
+    Z_ee_mass_low,
     bins=bins,
-    weights=weights_events*scale1,
+    weights=weights_low*scale,
     label = "Drell-Yan MC",
     xlabel="Mass [GeV]",
     title="Z → ee Invariant Mass",
@@ -92,25 +66,18 @@ plot_hist(
     logy=True
 )
 
-weights_padded = ak.pad_none(electrons_low.weight, 1, axis=1)
-weights_filled = ak.fill_none(weights_padded, 0)
+mc_dy_high = load_dataset(root_file = mc_dy_high_data)
 
-# Now take the first element safely
-event_weights = ak.firsts(weights_filled)
+electrons_high, weights_high = build_electrons(mc_dy_high)
 
-wsum = ak.sum(event_weights)
-
-scale2 = (sigmaDYlow * L_int) * (entry_events/total_events) / wsum
-weights_events = ak.firsts(two_el_low.weight)
+Z_ee_mass_high = z_mass_numpy(electrons_high)
+entry_events = len(electrons_high)
+scale = (sigmaDYhigh * L_int) * (entry_events/total_events) / wsumHigh
 
 plot_hist(
-    Z_ee_mass2,
+    Z_ee_mass_high,
     bins=bins,
-    weights=weights_events*scale2,
-    # label = "Drell-Yan MC",
-    xlabel="Mass [GeV]",
-    title="Z → ee Invariant Mass",
-    logx=True,
-    logy=True
+    weights=weights_high*scale,
+    xlabel="Mass [GeV]"
 )
 plt.show()
