@@ -40,7 +40,7 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
     tree->SetBranchStatus("nElectron", true);
     tree->SetBranchStatus("Electron_mass", true);
 
-    if {!isMC}{
+    if (!isMC){
     tree->SetBranchStatus("Electron_miniPFRelIso_all", true);
     tree->SetBranchStatus("Electron_miniPFRelIso_chg", true);
     tree->SetBranchStatus("Electron_dz", true);
@@ -166,7 +166,7 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
             
         }
 
-        for (int j = 0; j < 4; j++) {
+        for (UInt_t j = 0; j < 4; j++) {
             if(j < nJet){
                 out_Jet_pt[j] = Jet_pt[j];
                 out_Jet_eta[j] = Jet_eta[j];
@@ -180,7 +180,6 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
             }
         }
         
-
         outTree->Fill();
     }
 
@@ -194,7 +193,7 @@ int main() {
     TChain* mcTreeHigh = createChainFromFileList("../data/raw/signal/CMS_mc_RunIISummer20UL16NanoAODv9_DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_30000_file_index.txt", 1);  
     TChain* mcTreeLow = createChainFromFileList("../data/raw/signal/CMS_mc_RunIISummer20UL16NanoAODv9_DYJetsToLL_M-10to50_TuneCP5_13TeV-amcatnloFXFX-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_2520000_file_index.txt", 1);
 
-    writeRootFile(tree, "../data/processed/real/realData.root", wsum, false);
+    writeRootFile(tree, "../data/processed/real/real.root", wsum, false);
     writeRootFile(mcTreeHigh, "../data/processed/signal/mcDYhigh.root", wsum, true);
     cout << "Wsum for mcTreeHigh: " << wsum << endl;
     writeRootFile(mcTreeLow, "../data/processed/signal/mcDYlow.root", wsum, true);
