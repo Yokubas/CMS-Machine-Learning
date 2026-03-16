@@ -21,7 +21,7 @@ mc_dy_high_data = "data/processed/signal/mcDYhigh.root"
 mc_dy_low_data = "data/processed/signal/mcDYlow.root"
 
 total_events = 85388673 
-
+entry = 843234
 wsumHigh = 3.2887e+10
 wsumLow = 8.26117e+10
 
@@ -66,17 +66,14 @@ mc_dy_low = load_dataset(root_file = mc_dy_low_data)
 electrons_low, weights_low = build_electrons(mc_dy_low)
 
 Z_ee_mass_low = z_mass_numpy(electrons_low)
-entry_events = len(electrons_low)
-scale_low = (sigmaDYlow * L_int) * (entry_events/total_events) / wsumLow
-
+scale_low = (sigmaDYlow * L_int) * (entry/total_events) / wsumLow
 
 mc_dy_high = load_dataset(root_file = mc_dy_high_data)
 
 electrons_high, weights_high = build_electrons(mc_dy_high)
 
 Z_ee_mass_high = z_mass_numpy(electrons_high)
-entry_events = len(electrons_high)
-scale_high = (sigmaDYhigh * L_int) * (entry_events/total_events) / wsumHigh
+scale_high = (sigmaDYhigh * L_int) * (entry/total_events) / wsumHigh
 
 mass_mc = np.concatenate([Z_ee_mass_low, Z_ee_mass_high])
 weights_mc = np.concatenate([weights_low*scale_low, weights_high*scale_high])
