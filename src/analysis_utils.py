@@ -3,6 +3,7 @@ import awkward as ak
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+
 def load_dataset(root_file, max_events=None):
     
     file = uproot.open(root_file)
@@ -65,6 +66,29 @@ def prepare_input(arr):
         df[f"Jet{i+1}_btag"] = ak.to_numpy(ak.fill_none(padded_btag[:, i], 0))
 
     return df.reset_index(drop=True)
+
+def process_mc(file, sigma, wsum, label, L_int = 8746231868.215154648 / 1e6, entry = 843234, total_events = 85388673):
+    events = load_dataset(file)
+    electrons, weights = build_electrons(events)
+
+    mass = z_mass_numpy(electrons)
+
+    scale = (sigma * L_int) * (entry/total_events) / wsum
+
+    return {
+        "label": label,
+        "mass": mass,
+        "weights": weights * scale,
+        "events": events
+    }
+
+def apply_nn(events, model = model, threshold = threshold, scaler = scaler):
+    prepared = prepare_input(events)
+    X = prepared.values
+    X_scaled = scaler.transform(X)
+    y_pred = model.predict(X_scaled, batch_size=1024)
+    mask = y_pred.flatten() > threshold
+    return events[mask]
 
 def plot_hist(values, bins, xlabel, ylabel="Events", color = 'r', histtype= 'bar', label = None, title=None, logx = False, logy = False, weights = None):
     # plt.figure(figsize=(7, 5))
