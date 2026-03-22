@@ -67,8 +67,12 @@ def prepare_input(arr):
 
     return df.reset_index(drop=True)
 
-def process_mc(file, sigma, wsum, label, L_int = 8746231868.215154648 / 1e6, entry = 843234, total_events = 85388673):
+def process_mc(file, sigma, wsum, label, apply_nn_flag=False, model=None, scaler=None, threshold=0.5, L_int = 8746231868.215154648 / 1e6, entry = 843234, total_events = 85388673):
     events = load_dataset(file)
+
+    if apply_nn_flag:
+        events = apply_nn(events, model=model, scaler=scaler, threshold=threshold)
+
     electrons, weights = build_electrons(events)
 
     mass = z_mass_numpy(electrons)
@@ -82,27 +86,10 @@ def process_mc(file, sigma, wsum, label, L_int = 8746231868.215154648 / 1e6, ent
         "events": events
     }
 
-def apply_nn(events, model = model, threshold = threshold, scaler = scaler):
+def apply_nn(events, model, scaler, threshold):
     prepared = prepare_input(events)
     X = prepared.values
     X_scaled = scaler.transform(X)
     y_pred = model.predict(X_scaled, batch_size=1024)
     mask = y_pred.flatten() > threshold
     return events[mask]
-
-def plot_hist(values, bins, xlabel, ylabel="Events", color = 'r', histtype= 'bar', label = None, title=None, logx = False, logy = False, weights = None):
-    # plt.figure(figsize=(7, 5))
-    plt.hist(values, bins=bins, label = label, weights = weights, histtype = histtype, zorder = 10, color = color)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    if title:
-        plt.title(title)
-    if logx:
-        plt.xscale("log")
-    if logy:
-        plt.yscale("log")
-    plt.grid(True)
-    # plt.xlim(0, 400)
-    plt.tight_layout()
-    plt.legend()
-    # plt.show()
