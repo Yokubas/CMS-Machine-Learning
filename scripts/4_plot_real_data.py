@@ -62,6 +62,16 @@ dy_total = {
     "label": r"DY $\rightarrow e^+ e^-$"
 }
 
+# --- DY tau total ---
+dy_low_tau = process_mc("data/processed/background/mcDYlow_tau.root", sigmaDYlow, wsumLow, "DY low tau")
+dy_high_tau = process_mc("data/processed/background/mcDYhigh_tau.root", sigmaDYhigh, wsumHigh, "DY high tau")
+
+dy_tau_total = {
+    "mass": np.concatenate([dy_low_tau["mass"], dy_high_tau["mass"]]),
+    "weights": np.concatenate([dy_low_tau["weights"], dy_high_tau["weights"]]),
+    "label": r"DY $\rightarrow \tau \tau$"
+}
+
 # --- Single top total ---
 tw = process_mc("data/processed/background/tW.root", sigma_tw, wsum_tw, "tW")
 aw = process_mc("data/processed/background/antitopW.root", sigma_aw, wsum_aw, "tWbar")
@@ -88,6 +98,7 @@ mc_stack = [
     zz,
     single_top,
     ttbar,
+    dy_tau_total,
     dy_total
 ]
 
@@ -117,7 +128,6 @@ plt.hist(
     label=labels
 )
 
-
 plt.xscale("log")
 plt.yscale("log")
 plt.legend()
@@ -127,7 +137,7 @@ plt.savefig("results/stack_before_nn.png")
 plt.show()
 
 # Real vs MC after NN selection
-threshold = 0.5
+threshold = 0.7
 
 events_real_nn = apply_nn(events_real, model=model, scaler=scaler, threshold=threshold)
 electrons_real_nn, _ = build_electrons(events_real_nn)
@@ -146,6 +156,21 @@ dy_total_nn = {
     "mass": np.concatenate([dy_low_nn["mass"], dy_high_nn["mass"]]),
     "weights": np.concatenate([dy_low_nn["weights"], dy_high_nn["weights"]]),
     "label": r"DY $\rightarrow e^+ e^-$"
+}
+
+# --- DY tau tau ---
+dy_low_tau_nn = process_mc("data/processed/background/mcDYlow_tau.root", sigmaDYlow, wsumLow,
+                           r"DY $\rightarrow \tau \tau$",
+                           apply_nn_flag=True, model=model, scaler=scaler, threshold=threshold)
+
+dy_high_tau_nn = process_mc("data/processed/background/mcDYhigh_tau.root", sigmaDYhigh, wsumHigh,
+                            r"DY $\rightarrow \tau \tau$",
+                            apply_nn_flag=True, model=model, scaler=scaler, threshold=threshold)
+
+dy_tau_total_nn = {
+    "mass": np.concatenate([dy_low_tau_nn["mass"], dy_high_tau_nn["mass"]]),
+    "weights": np.concatenate([dy_low_tau_nn["weights"], dy_high_tau_nn["weights"]]),
+    "label": r"DY $\rightarrow \tau \tau$"
 }
 
 tw_nn = process_mc("data/processed/background/tW.root", sigma_tw, wsum_tw,
@@ -182,6 +207,7 @@ mc_stack_nn = [
     zz_nn,
     single_top_nn,
     ttbar_nn,
+    dy_tau_total_nn,
     dy_total_nn
 ]
 
