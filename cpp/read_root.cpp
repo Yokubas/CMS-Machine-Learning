@@ -9,7 +9,7 @@
 #include <vector>
 #include <numeric> 
 #include <algorithm>
-
+#include <filesystem>
 using namespace std;
 
 Float_t Electron_pt[100], Electron_eta[100], Electron_phi[100], Electron_mass[100];
@@ -31,7 +31,7 @@ TChain* createChainFromFileList(const char* txtFileName, int maxFiles = -1) {
     return chain;
 }
 
-void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, bool isMC){
+void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, bool isMC, bool isDY){
     
     tree->SetBranchStatus("*", false);
     tree->SetBranchStatus("Electron_pt", true);
@@ -52,9 +52,11 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
     tree->SetBranchStatus("Jet_phi", true);
     tree->SetBranchStatus("Jet_btagDeepFlavB", true);
     
-    
+    UInt_t nLHEPart = 0;
+    Int_t LHEPart_pdgId[100];
+
     Float_t genWeight;
-    sumGenWeight = 0;
+    sumGenWeight = 0.0;
     Float_t out_genWeight;
     UInt_t nElectron;
     UInt_t nJet;
@@ -70,6 +72,13 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
     if (isMC) {
         tree->SetBranchStatus("genWeight", true);
         tree->SetBranchAddress("genWeight", &genWeight);    
+    }
+
+    if (isDY) {
+        tree->SetBranchStatus("nLHEPart", true);
+        tree->SetBranchStatus("LHEPart_pdgId", true);
+        tree->SetBranchAddress("nLHEPart", &nLHEPart);
+        tree->SetBranchAddress("LHEPart_pdgId", &LHEPart_pdgId);
     }
 
     tree->SetBranchAddress("Electron_pt", &Electron_pt);
@@ -90,9 +99,32 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
     tree->SetBranchAddress("Jet_phi", Jet_phi);
     tree->SetBranchAddress("Jet_btagDeepFlavB", Jet_btagDeepFlavB);
     
-
     TFile *outFile = new TFile(outFileName,"RECREATE");
     TTree *outTree = new TTree("Events","Selected branches");
+
+    TFile *outFile_tau = nullptr;
+    TTree *outTree_tau = nullptr;
+
+    if (isDY) {
+        string outNameStr(outFileName); // "../data/processed/signal/mcDYlow.root"
+        std::filesystem::path p(outNameStr);
+
+        string baseName = p.stem().string();     // "mcDYlow"
+        string tauFilePath = "../data/processed/background/" + baseName + "_tau.root";
+
+        outFile_tau = new TFile(tauFilePath.c_str(), "RECREATE");
+        outTree_tau = new TTree("Events","DY tau");
+        outTree_tau->Branch("nElectron", &out_nElectron, "nElectron/i");
+        outTree_tau->Branch("Electron_pt", out_Electron_pt, "Electron_pt[2]/F");
+        outTree_tau->Branch("Electron_eta", out_Electron_eta, "Electron_eta[2]/F");
+        outTree_tau->Branch("Electron_phi", out_Electron_phi, "Electron_phi[2]/F");
+        outTree_tau->Branch("Electron_mass", out_Electron_mass, "Electron_mass[2]/F");
+        if(isMC) outTree_tau->Branch("genWeight", &out_genWeight, "genWeight/F");
+        outTree_tau->Branch("Jet_pt", out_Jet_pt, "Jet_pt[4]/F");
+        outTree_tau->Branch("Jet_eta", out_Jet_eta, "Jet_eta[4]/F");
+        outTree_tau->Branch("Jet_phi", out_Jet_phi, "Jet_phi[4]/F");
+        outTree_tau->Branch("Jet_btagDeepFlavB", out_Jet_btagDeepFlavB, "Jet_btagDeepFlavB[4]/F");
+    }
 
     // output branches
     outTree->Branch("nElectron", &out_nElectron, "nElectron/i");
@@ -117,7 +149,21 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
         
         tree->GetEntry(iEntry);
 
-        if (isMC) sumGenWeight += genWeight;
+        
+        bool hasTau = false;
+        
+        if (isDY) {
+            for (UInt_t i = 0; i < nLHEPart; ++i) {
+                if (abs(LHEPart_pdgId[i]) == 15) {
+                    hasTau = true;
+                    break;
+                }
+            }
+        }
+        
+        if (isMC) {
+                sumGenWeight += genWeight; 
+        }
 
         if (nElectron > 1){
 
@@ -180,7 +226,16 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
                                 out_Jet_btagDeepFlavB[j] = 0;                
                             }
                         }
-                        outTree->Fill();
+                        
+                        if (isDY) {
+                            if (hasTau) {
+                                outTree_tau->Fill();      // goes to tau file
+                            } else {
+                                outTree->Fill();   // clean DY only
+                            }
+                        } else {
+                            outTree->Fill();       // all non-DY unchanged
+                        }
                     }
         }
         
@@ -188,56 +243,60 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
 
     outFile->Write();
     outFile->Close();
+    if (isDY) {
+    outFile_tau->Write();
+    outFile_tau->Close();
+    }
 }
 
 int main() {
     double wsum = 0.0;
-    TChain* tree = createChainFromFileList("../data/real/CMS_Run2016H_DoubleEG_NANOAOD_UL2016_MiniAODv2_NanoAODv9-v1_100000_file_index.txt", 1);  
+    // TChain* tree = createChainFromFileList("../data/real/CMS_Run2016H_DoubleEG_NANOAOD_UL2016_MiniAODv2_NanoAODv9-v1_100000_file_index.txt", 1);  
     TChain* mcTreeHigh = createChainFromFileList("../data/raw/signal/CMS_mc_RunIISummer20UL16NanoAODv9_DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_30000_file_index.txt", 1);  
     TChain* mcTreeLow = createChainFromFileList("../data/raw/signal/CMS_mc_RunIISummer20UL16NanoAODv9_DYJetsToLL_M-10to50_TuneCP5_13TeV-amcatnloFXFX-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_2520000_file_index.txt", 1);
     // Background
-    TChain* ttbarTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_TTJets_TuneCP5_13TeV-amcatnloFXFX-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_2530000_file_index.txt", 4);
+    // TChain* ttbarTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_TTJets_TuneCP5_13TeV-amcatnloFXFX-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_2530000_file_index.txt", 4);
 
-    TChain* twTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_ST_tW_top_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_2520000_file_index.txt", 4);  
-    TChain* awTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_ST_tW_antitop_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_270000_file_index.txt", 4);  
-    TChain* stTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_ST_t-channel_top_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_120000_file_index.txt", 4);  
-    TChain* saTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_ST_t-channel_antitop_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_120000_file_index.txt");  
+    // TChain* twTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_ST_tW_top_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_2520000_file_index.txt", 4);  
+    // TChain* awTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_ST_tW_antitop_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_270000_file_index.txt", 4);  
+    // TChain* stTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_ST_t-channel_top_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_120000_file_index.txt", 4);  
+    // TChain* saTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_ST_t-channel_antitop_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_120000_file_index.txt");  
    
-    TChain* zzTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_ZZ_TuneCP5_13TeV-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_130000_file_index.txt");  
-    TChain* wzTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_WZ_TuneCP5_13TeV-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_110000_file_index.txt", 4);  
-    TChain* wwTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_WW_TuneCP5_13TeV-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_130000_file_index.txt", 4);  
+    // TChain* zzTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_ZZ_TuneCP5_13TeV-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_130000_file_index.txt");  
+    // TChain* wzTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_WZ_TuneCP5_13TeV-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_110000_file_index.txt", 4);  
+    // TChain* wwTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_WW_TuneCP5_13TeV-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v1_130000_file_index.txt", 4);  
 
-    writeRootFile(tree, "../data/processed/real/real.root", wsum, false);
+    // writeRootFile(tree, "../data/processed/real/real.root", wsum, false, false);
 
-    writeRootFile(mcTreeHigh, "../data/processed/signal/mcDYhigh.root", wsum, true);
+    writeRootFile(mcTreeHigh, "../data/processed/signal/mcDYhigh.root", wsum, true, true);
     cout << "Wsum for mcTreeHigh: " << wsum << endl;
 
-    writeRootFile(mcTreeLow, "../data/processed/signal/mcDYlow.root", wsum, true);
+    writeRootFile(mcTreeLow, "../data/processed/signal/mcDYlow.root", wsum, true, true);
     cout << "Wsum for mcTreeLow: " << wsum << endl;
 
-    writeRootFile(ttbarTree, "../data/processed/background/ttbar.root", wsum, true);
-    cout << "Wsum for top-antitop (ttbar): " << wsum << endl;
+    // writeRootFile(ttbarTree, "../data/processed/background/ttbar.root", wsum, true, false);
+    // cout << "Wsum for top-antitop (ttbar): " << wsum << endl;
 
-    writeRootFile(twTree, "../data/processed/background/tW.root", wsum, true);
-    cout << "Wsum for tW: " << wsum << endl;
+    // writeRootFile(twTree, "../data/processed/background/tW.root", wsum, true, false);
+    // cout << "Wsum for tW: " << wsum << endl;
 
-    writeRootFile(awTree, "../data/processed/background/antitopW.root", wsum, true);
-    cout << "Wsum for antitop W (aw): " << wsum << endl;
+    // writeRootFile(awTree, "../data/processed/background/antitopW.root", wsum, true, false);
+    // cout << "Wsum for antitop W (aw): " << wsum << endl;
 
-    writeRootFile(stTree, "../data/processed/background/singletop.root", wsum, true);
-    cout << "Wsum for single top (t-channel) (st): " << wsum << endl;
+    // writeRootFile(stTree, "../data/processed/background/singletop.root", wsum, true, false);
+    // cout << "Wsum for single top (t-channel) (st): " << wsum << endl;
 
-    writeRootFile(saTree, "../data/processed/background/sa.root", wsum, true);
-    cout << "Wsum for single antitop (t-channel) (sa): " << wsum << endl;
+    // writeRootFile(saTree, "../data/processed/background/sa.root", wsum, true, false);
+    // cout << "Wsum for single antitop (t-channel) (sa): " << wsum << endl;
 
-    writeRootFile(zzTree, "../data/processed/background/zz.root", wsum, true);
-    cout << "Wsum for ZZ: " << wsum << endl;
+    // writeRootFile(zzTree, "../data/processed/background/zz.root", wsum, true, false);
+    // cout << "Wsum for ZZ: " << wsum << endl;
 
-    writeRootFile(wzTree, "../data/processed/background/wz.root", wsum, true);
-    cout << "Wsum for WZ: " << wsum << endl;
+    // writeRootFile(wzTree, "../data/processed/background/wz.root", wsum, true, false);
+    // cout << "Wsum for WZ: " << wsum << endl;
 
-    writeRootFile(wwTree, "../data/processed/background/ww.root", wsum, true);
-    cout << "Wsum for WW: " << wsum << endl;
+    // writeRootFile(wwTree, "../data/processed/background/ww.root", wsum, true, false);
+    // cout << "Wsum for WW: " << wsum << endl;
 
     return 0;
 }
