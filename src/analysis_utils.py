@@ -43,14 +43,58 @@ def z_mass_numpy(leps):
 def prepare_input(arr):
     df = pd.DataFrame()
 
+    df = pd.DataFrame()
+
     df["nElectron"] = ak.to_numpy(ak.count_nonzero(arr["Electron_pt"] > 0, axis=1))
 
     padded_pt  = ak.pad_none(arr["Electron_pt"],  2)
     padded_eta = ak.pad_none(arr["Electron_eta"], 2)
+    padded_sieie = ak.pad_none(arr["Electron_sieie"], 2)
+    padded_hoe    = ak.pad_none(arr["Electron_hoe"], 2)
+    padded_dz     = ak.pad_none(arr["Electron_dz"], 2)
+
+    for i in range(2):
+        df[f"Electron{i+1}_pt"]  = ak.to_numpy(ak.fill_none(padded_pt[:, i], 0))
+        df[f"Electron{i+1}_eta"] = ak.to_numpy(ak.fill_none(padded_eta[:, i], 0))
+        df[f"Electron{i+1}_sieie"] = ak.to_numpy(ak.fill_none(padded_sieie[:, i], 0))
+        df[f"Electron{i+1}_hoe"]    = ak.to_numpy(ak.fill_none(padded_hoe[:, i], 0))
+        df[f"Electron{i+1}_dz"]     = ak.to_numpy(ak.fill_none(padded_dz[:, i], 0))
+
+    df["nJet"] = ak.to_numpy(ak.count_nonzero(arr["Jet_pt"] > 0, axis=1))
+    
+    padded_pt  = ak.pad_none(arr["Jet_pt"], 4)
+    padded_eta = ak.pad_none(arr["Jet_eta"], 4)
+    padded_phi = ak.pad_none(arr["Jet_phi"], 4)
+    padded_btag = ak.pad_none(arr["Jet_btagDeepFlavB"], 4)
+    
+    for i in range(4):
+        df[f"Jet{i+1}_pt"] = ak.to_numpy(ak.fill_none(padded_pt[:, i], 0))
+        df[f"Jet{i+1}_eta"] = ak.to_numpy(ak.fill_none(padded_eta[:, i], 0))
+        df[f"Jet{i+1}_phi"] = ak.to_numpy(ak.fill_none(padded_phi[:, i], 0))
+        df[f"Jet{i+1}_btag"] = ak.to_numpy(ak.fill_none(padded_btag[:, i], 0))
+
+    return df.reset_index(drop=True)
+
+def prepare_training(arr, label):
+    n_events = len(arr["Electron_pt"])  # number of events in this dataset
+    df = pd.DataFrame()
+    
+    # Set label correctly
+    df["label"] = [label] * n_events
+    df["nElectron"] = ak.to_numpy(ak.count_nonzero(arr["Electron_pt"] > 0, axis=1))
+
+    padded_pt  = ak.pad_none(arr["Electron_pt"],  2)
+    padded_eta = ak.pad_none(arr["Electron_eta"], 2)
+    padded_sieie = ak.pad_none(arr["Electron_sieie"], 2)
+    padded_hoe    = ak.pad_none(arr["Electron_hoe"], 2)
+    padded_dz     = ak.pad_none(arr["Electron_dz"], 2)
 
     for i in range(2):
         df[f"Electron{i+1}_pt"]  = ak.to_numpy(ak.fill_none(padded_pt[:,  i],  0))
         df[f"Electron{i+1}_eta"] = ak.to_numpy(ak.fill_none(padded_eta[:, i], 0))
+        df[f"Electron{i+1}_sieie"] = ak.to_numpy(ak.fill_none(padded_sieie[:, i], 0))
+        df[f"Electron{i+1}_hoe"]    = ak.to_numpy(ak.fill_none(padded_hoe[:, i], 0))
+        df[f"Electron{i+1}_dz"]     = ak.to_numpy(ak.fill_none(padded_dz[:, i], 0))
 
     df["nJet"] = ak.to_numpy(ak.count_nonzero(arr["Jet_pt"] > 0, axis=1))
     
