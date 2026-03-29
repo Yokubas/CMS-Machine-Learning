@@ -5,16 +5,61 @@ from sklearn.preprocessing import StandardScaler
 import tensorflow as tf
 from src.plot_training import plot_training_history, plot_auc
 import joblib
-# Load CSV dataset
-df = pd.read_csv("data/processed/electron_dataset.csv")
+from src.analysis_utils import (
+    load_dataset,
+    prepare_training
+)
+# signal
+mcDYhigh = load_dataset("data/processed/signal/mcDYhigh.root")
+mcDYlow = load_dataset("data/processed/signal/mcDYlow.root")
 
-# Uncomment to check how balanced is your prepared dataset
-# print(df['target'].value_counts())
+# backgound
+# --- DY -> TauTau --- 
+dy_low_tau = load_dataset("data/processed/background/mcDYlow_tau.root")
+dy_high_tau = load_dataset("data/processed/background/mcDYhigh_tau.root")
 
-# Separate features and target
-X = df.drop(columns = ["target"]).to_numpy()
-y = df["target"].to_numpy()
+# --- Single top total ---
+tw = load_dataset("data/processed/background/tW.root")
+aw = load_dataset("data/processed/background/antitopW.root")
+st = load_dataset("data/processed/background/singletop.root")
+sa = load_dataset("data/processed/background/sa.root")
 
+# --- TTbar ---
+ttbar = load_dataset("data/processed/background/ttbar.root")
+
+# --- Diboson ---
+zz = load_dataset("data/processed/background/zz.root")
+wz = load_dataset("data/processed/background/wz.root")
+ww = load_dataset("data/processed/background/ww.root")
+
+wjets = load_dataset("data/processed/background/wjets.root")
+
+df_bkg = pd.concat([
+    prepare_training(dy_low_tau, label = 0),
+    prepare_training(dy_high_tau, label = 0),
+    prepare_training(tw, label = 0),
+    prepare_training(aw, label = 0),
+    prepare_training(st, label = 0),
+    prepare_training(sa, label = 0),
+    prepare_training(ttbar, label = 0),
+    prepare_training(zz, label = 0),
+    prepare_training(wz, label = 0),
+    prepare_training(ww, label = 0),
+    prepare_training(wjets, label = 0)
+], ignore_index=True)
+
+df_signal = pd.concat([
+    prepare_training(mcDYhigh, label = 1),
+    prepare_training(mcDYlow, label = 1)
+], ignore_index=True)
+
+df_train = pd.concat([df_signal, df_bkg], ignore_index=True)
+df_train = df_train.replace([np.inf, -np.inf], np.nan)
+df_train = df_train.dropna()
+
+# # Separate features and labels
+X = df_train.drop(columns = ["label"]).to_numpy()
+y = df_train["label"].to_numpy()
 # Scale features to mean 0 and std 1 for stable and efficient training (does not get biased towards larger numerical values)
 
 scaler = StandardScaler()
@@ -23,11 +68,11 @@ scaler = StandardScaler()
 X = scaler.fit_transform(X)
 
 # Save the scaler for later use
-joblib.dump(scaler, "results/scaler.pkl")
+joblib.dump(scaler, "results/scaler_2.pkl")
 
 # Split into training and test sets
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
+    X, y, test_size=0.2, random_state=42, shuffle = True
 )
 
 # Build feed-forward neural network
@@ -92,7 +137,7 @@ history = model.fit(
     verbose=2               # Controls logging: 2 = progress per epoch
 )
 
-model.save("results/electron_classifier.h5")
+model.save("results/electron_classifier_2.h5")
 
 plot_training_history(history, save_path="results/training_plot.png")
 
