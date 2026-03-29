@@ -11,9 +11,9 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model # type: ignore
 import joblib
 
-model_file = "results/electron_classifier.h5"
+model_file = "results/electron_classifier_2.h5"
 model = load_model(model_file)
-scaler = joblib.load("results/scaler.pkl")
+scaler = joblib.load("results/scaler_2.pkl")
 # Using processed data files
 real_data = "data/processed/real/real.root"
 
