@@ -42,11 +42,15 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
     tree->SetBranchStatus("Electron_sieie", true);
     tree->SetBranchStatus("Electron_hoe", true);
     tree->SetBranchStatus("Electron_dz", true);
-    // tree->SetBranchStatus("Electron_miniPFRelIso_all", true);
-    // tree->SetBranchStatus("Electron_miniPFRelIso_chg", true);
-    // tree->SetBranchStatus("Electron_dxy", true);
-    // tree->SetBranchStatus("Electron_ip3d", true);
-    
+    tree->SetBranchStatus("MET_phi", true);
+    tree->SetBranchStatus("MET_significance", true);
+    tree->SetBranchStatus("MET_sumEt", true);
+    tree->SetBranchStatus("Electron_scEtOverPt", true);
+    tree->SetBranchStatus("Electron_miniPFRelIso_all", true);
+    tree->SetBranchStatus("Electron_eInvMinusPInv", true);
+    tree->SetBranchStatus("Electron_dxy", true);
+    tree->SetBranchStatus("Electron_dr03TkSumPt", true);
+
     tree->SetBranchStatus("nJet", true);
     tree->SetBranchStatus("Jet_pt", true);
     tree->SetBranchStatus("Jet_eta", true);
@@ -57,23 +61,21 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
     UInt_t nLHEPart = 0;
     Int_t LHEPart_pdgId[100];
     Float_t genWeight;
-    Float_t Electron_sieie[100];
-    Float_t Electron_hoe[100];
-    Float_t Electron_dz[100];
+    Float_t Electron_sieie[100], MET_phi[100], MET_significance[100], MET_sumEt[100];
+    Float_t Electron_hoe[100], Electron_scEtOverPt[100], Electron_miniPFRelIso_all[100];
+    Float_t Electron_dz[100], Electron_eInvMinusPInv[100], Electron_dxy[100], Electron_dr03TkSumPt[100];
+
     sumGenWeight = 0.0;
     Float_t out_genWeight;
     UInt_t nElectron;
     UInt_t nJet;
     UInt_t out_nElectron;
     
-    Float_t out_Electron_pt[2], out_Electron_eta[2], out_Electron_phi[2], out_Electron_mass[2]; 
-    Float_t out_Electron_sieie[2], out_Electron_hoe[2], out_Electron_dz[2];
-    
+    Float_t out_Electron_pt[2], out_Electron_eta[2], out_Electron_phi[2], out_Electron_mass[2], out_Electron_eInvMinusPInv[2], out_Electron_dxy[2]; 
+    Float_t out_Electron_sieie[2], out_Electron_hoe[2], out_Electron_dz[2], out_Electron_scEtOverPt[2], out_Electron_miniPFRelIso_all[2], out_Electron_dr03TkSumPt[2];
+    Float_t out_MET_phi, out_MET_significance, out_MET_sumEt;
+
     Float_t out_Jet_pt[4], out_Jet_eta[4], out_Jet_phi[4], out_Jet_btagDeepFlavB[4];
-    
-    // Float_t out_Electron_miniPFRelIso_all[2], out_Electron_miniPFRelIso_chg[2];
-    
-    // Float_t out_Electron_dz[2], out_Electron_dxy[2], out_Electron_ip3d[2];
     
     if (isMC) {
         tree->SetBranchStatus("genWeight", true);
@@ -100,10 +102,14 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
     tree->SetBranchAddress("Electron_sieie", &Electron_sieie);
     tree->SetBranchAddress("Electron_hoe", &Electron_hoe);
     tree->SetBranchAddress("Electron_dz", &Electron_dz);
-    // tree->SetBranchAddress("Electron_miniPFRelIso_all", Electron_miniPFRelIso_all);
-    // tree->SetBranchAddress("Electron_miniPFRelIso_chg", Electron_miniPFRelIso_chg);
-    // tree->SetBranchAddress("Electron_dxy", Electron_dxy);
-    // tree->SetBranchAddress("Electron_ip3d", Electron_ip3d);
+    tree->SetBranchAddress("MET_phi", &MET_phi);
+    tree->SetBranchAddress("MET_significance", &MET_significance);
+    tree->SetBranchAddress("MET_sumEt", &MET_sumEt);
+    tree->SetBranchAddress("Electron_scEtOverPt", &Electron_scEtOverPt);
+    tree->SetBranchAddress("Electron_miniPFRelIso_all", &Electron_miniPFRelIso_all);
+    tree->SetBranchAddress("Electron_eInvMinusPInv", &Electron_eInvMinusPInv);
+    tree->SetBranchAddress("Electron_dxy", &Electron_dxy);
+    tree->SetBranchAddress("Electron_dr03TkSumPt", &Electron_dr03TkSumPt);
 
     tree->SetBranchAddress("nJet", &nJet);
     tree->SetBranchAddress("Jet_pt", &Jet_pt);
@@ -134,8 +140,17 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
         outTree_tau->Branch("Electron_sieie", &out_Electron_sieie, "Electron_sieie[2]/F");
         outTree_tau->Branch("Electron_hoe", &out_Electron_hoe, "Electron_hoe[2]/F");
         outTree_tau->Branch("Electron_dz", &out_Electron_dz, "Electron_dz[2]/F");
+        outTree_tau->Branch("MET_phi", &out_MET_phi, "MET_phi/F");
+        outTree_tau->Branch("MET_significance", &out_MET_significance, "MET_significance/F");
+        outTree_tau->Branch("MET_sumEt", &out_MET_sumEt, "MET_sumEt/F");
+        outTree_tau->Branch("Electron_scEtOverPt", &out_Electron_scEtOverPt, "Electron_scEtOverPt[2]/F");
+        outTree_tau->Branch("Electron_miniPFRelIso_all", &out_Electron_miniPFRelIso_all, "Electron_miniPFRelIso_all[2]/F");
+        outTree_tau->Branch("Electron_eInvMinusPInv", &out_Electron_eInvMinusPInv, "Electron_eInvMinusPInv[2]/F");
+        outTree_tau->Branch("Electron_dxy", &out_Electron_dxy, "Electron_dxy[2]/F");
+        outTree_tau->Branch("Electron_dr03TkSumPt", &out_Electron_dr03TkSumPt, "Electron_dr03TkSumPt[2]/F");
 
         if(isMC) outTree_tau->Branch("genWeight", &out_genWeight, "genWeight/F");
+
         outTree_tau->Branch("Jet_pt", &out_Jet_pt, "Jet_pt[4]/F");
         outTree_tau->Branch("Jet_eta", &out_Jet_eta, "Jet_eta[4]/F");
         outTree_tau->Branch("Jet_phi", &out_Jet_phi, "Jet_phi[4]/F");
@@ -151,12 +166,17 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
     outTree->Branch("Electron_sieie", &out_Electron_sieie, "Electron_sieie[2]/F");
     outTree->Branch("Electron_hoe", &out_Electron_hoe, "Electron_hoe[2]/F");
     outTree->Branch("Electron_dz", &out_Electron_dz, "Electron_dz[2]/F");
+    outTree->Branch("MET_phi", &out_MET_phi, "MET_phi/F");
+    outTree->Branch("MET_significance", &out_MET_significance, "MET_significance/F");
+    outTree->Branch("MET_sumEt", &out_MET_sumEt, "MET_sumEt/F");
+    outTree->Branch("Electron_scEtOverPt", &out_Electron_scEtOverPt, "Electron_scEtOverPt[2]/F");
+    outTree->Branch("Electron_miniPFRelIso_all", &out_Electron_miniPFRelIso_all, "Electron_miniPFRelIso_all[2]/F");
+    outTree->Branch("Electron_eInvMinusPInv", &out_Electron_eInvMinusPInv, "Electron_eInvMinusPInv[2]/F");
+    outTree->Branch("Electron_dxy", &out_Electron_dxy, "Electron_dxy[2]/F");
+    outTree->Branch("Electron_dr03TkSumPt", &out_Electron_dr03TkSumPt, "Electron_dr03TkSumPt[2]/F");
+
     if(isMC) outTree->Branch("genWeight", &out_genWeight, "genWeight/F");
 
-    // outTree->Branch("Electron_miniPFRelIso_all", out_Electron_miniPFRelIso_all, "Electron_miniPFRelIso_all[2]/F");
-    // outTree->Branch("Electron_miniPFRelIso_chg", out_Electron_miniPFRelIso_chg, "Electron_miniPFRelIso_chg[2]/F");
-    // outTree->Branch("Electron_dxy", out_Electron_dxy, "Electron_dxy[2]/F");
-    // outTree->Branch("Electron_ip3d", out_Electron_ip3d, "Electron_ip3d[2]/F");
 
     outTree->Branch("Jet_pt", out_Jet_pt, "Jet_pt[4]/F");
     outTree->Branch("Jet_eta", out_Jet_eta, "Jet_eta[4]/F");
@@ -203,6 +223,11 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
                             out_Electron_dz[i] = Electron_dz[id];
                             out_Electron_hoe[i] = Electron_hoe[id];
                             out_Electron_sieie[i] = Electron_sieie[id];
+                            out_Electron_scEtOverPt[i] = Electron_scEtOverPt[id];
+                            out_Electron_miniPFRelIso_all[i] = Electron_miniPFRelIso_all[id];
+                            out_Electron_eInvMinusPInv[i] = Electron_eInvMinusPInv[id];
+                            out_Electron_dxy[i] = Electron_dxy[id];
+                            out_Electron_dr03TkSumPt[i] = Electron_dr03TkSumPt[id];
                         
                         }
                         
@@ -225,7 +250,9 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
                         }
                 
                     }
-
+            out_MET_phi = MET_phi[0];
+            out_MET_significance = MET_significance[0];
+            out_MET_sumEt = MET_sumEt[0];
             outTree->Fill(); 
             continue; // skip rest of selection for W+jets events
         }
@@ -278,7 +305,11 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
                             out_Electron_dz[i] = Electron_dz[id];
                             out_Electron_hoe[i] = Electron_hoe[id];
                             out_Electron_sieie[i] = Electron_sieie[id];
-                            
+                            out_Electron_scEtOverPt[i] = Electron_scEtOverPt[id];
+                            out_Electron_miniPFRelIso_all[i] = Electron_miniPFRelIso_all[id];
+                            out_Electron_eInvMinusPInv[i] = Electron_eInvMinusPInv[id];
+                            out_Electron_dxy[i] = Electron_dxy[id];
+                            out_Electron_dr03TkSumPt[i] = Electron_dr03TkSumPt[id];
                         }
                         
                         if (isMC){ 
@@ -301,11 +332,20 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
                         
                         if (isDY) {
                             if (hasTau) {
+                                out_MET_phi = MET_phi[0];
+                                out_MET_significance = MET_significance[0];
+                                out_MET_sumEt = MET_sumEt[0];
                                 outTree_tau->Fill();      // goes to tau file
                             } else {
+                                out_MET_phi = MET_phi[0];
+                                out_MET_significance = MET_significance[0];
+                                out_MET_sumEt = MET_sumEt[0];
                                 outTree->Fill();   // clean DY only
                             }
                         } else {
+                            out_MET_phi = MET_phi[0];
+                            out_MET_significance = MET_significance[0];
+                            out_MET_sumEt = MET_sumEt[0];
                             outTree->Fill();       // all non-DY unchanged
                         }
                     }
