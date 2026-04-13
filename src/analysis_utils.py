@@ -47,14 +47,32 @@ def prepare_input(arr):
     df["nJet"] = ak.to_numpy(ak.count_nonzero(arr["Jet_pt"] > 0, axis=1))
 
     # --- Electrons (leading 2) ---
-    electron_features = ["pt", "eta", "phi", "mass", "sieie", "hoe", 
+    electron_features = ["pt", "eta", "phi", "sieie", "hoe", 
                          "dz", "dxy", "dr03TkSumPt", "scEtOverPt", 
                          "miniPFRelIso_all", "eInvMinusPInv"]
-    
+    # electron_features += ["pt", "eta", "phi"]
+    # for feature in electron_features:
+    #     padded = ak.pad_none(arr[f"Electron_{feature}"], 2)
+    #     for i in range(2):
+    #         df[f"Electron{i+1}_{feature}"] = ak.to_numpy(ak.fill_none(padded[:, i], 0))
+    ele_pt_list = []
+
     for feature in electron_features:
         padded = ak.pad_none(arr[f"Electron_{feature}"], 2)
         for i in range(2):
-            df[f"Electron{i+1}_{feature}"] = ak.to_numpy(ak.fill_none(padded[:, i], 0))
+            if feature == "pt":
+                ele_pt_list.append(ak.to_numpy(ak.fill_none(padded[:, i], 0)))
+            else:
+                df[f"Electron{i+1}_{feature}"] = ak.to_numpy(ak.fill_none(padded[:, i], 0))
+
+    # pt1 = ele_pt_list[0]
+    # pt2 = ele_pt_list[1]
+    # df["Electron_pt_ratio_21"] = pt2 / pt1
+
+    df.drop(columns=[
+    "Electron1_eta", "Electron2_eta",
+    "Electron1_phi", "Electron2_phi"
+    ], inplace=True)
 
     jet_features = ["pt", "eta", "phi", "btagDeepFlavB"]
     for feature in jet_features:
@@ -78,14 +96,32 @@ def prepare_training(arr, label):
     df["nJet"] = ak.to_numpy(ak.count_nonzero(arr["Jet_pt"] > 0, axis=1))
 
     # --- Electrons (leading 2) ---
-    electron_features = ["pt", "eta", "phi", "mass", "sieie", "hoe", 
+    electron_features = ["pt", "eta", "phi", "sieie", "hoe", 
                          "dz", "dxy", "dr03TkSumPt", "scEtOverPt", 
                          "miniPFRelIso_all", "eInvMinusPInv"]
+    # electron_features += ["pt", "eta", "phi"]
+    # for feature in electron_features:
+    #     padded = ak.pad_none(arr[f"Electron_{feature}"], 2)
+    #     for i in range(2):
+    #         df[f"Electron{i+1}_{feature}"] = ak.to_numpy(ak.fill_none(padded[:, i], 0))
     
+    ele_pt_list = []
     for feature in electron_features:
         padded = ak.pad_none(arr[f"Electron_{feature}"], 2)
         for i in range(2):
-            df[f"Electron{i+1}_{feature}"] = ak.to_numpy(ak.fill_none(padded[:, i], 0))
+            if feature == "pt":
+                ele_pt_list.append(ak.to_numpy(ak.fill_none(padded[:, i], 0)))
+            else:
+                df[f"Electron{i+1}_{feature}"] = ak.to_numpy(ak.fill_none(padded[:, i], 0))
+
+    # pt1 = ele_pt_list[0]
+    # pt2 = ele_pt_list[1]
+    # df["Electron_pt_ratio_21"] = pt2 / pt1
+
+    df.drop(columns=[
+    "Electron1_eta", "Electron2_eta",
+    "Electron1_phi", "Electron2_phi"
+    ], inplace=True)
 
     jet_features = ["pt", "eta", "phi", "btagDeepFlavB"]
     for feature in jet_features:
