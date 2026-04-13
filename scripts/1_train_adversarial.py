@@ -63,32 +63,20 @@ masses_signal = np.concatenate([
     z_mass_numpy(electrons_signal_low)
 ])
 
-bins = np.array([40,45,50,55,60,64,68,72,76,81,86,91,96,101,106,110,
-                 115,120,126,133,141,150,160,171,185,200,220,243,273,
-                 320,380,440,510,600,700,830,1000,1500,2000,3000])
-indices = np.digitize(masses_signal, bins)
-indices = np.clip(indices, 1, len(bins)-1)
-
-counts = np.bincount(indices, minlength=len(bins)+1)
-
-# avoid division by zero
-counts[counts == 0] = 1
-
-weights_signal = 1.0 / counts
-weights_signal = weights_signal[indices]
-weights_signal = weights_signal / np.mean(weights_signal)
-
 df_train = pd.concat([df_signal, df_bkg], ignore_index=True)
 df_train = df_train.replace([np.inf, -np.inf], np.nan)
 df_train = df_train.dropna()
 
-# Start with ones (background gets weight=1)
-sample_weights = np.ones(len(df_train))
-
-# Apply DY mass weights only to signal rows
+masses = np.zeros(len(df_train))
 signal_mask = df_train["label"] == 1
-assert len(weights_signal) == signal_mask.sum()  # sanity check
-sample_weights[signal_mask] = weights_signal
+masses[signal_mask] = masses_signal
+assert len(masses_signal) == signal_mask.sum()
+masses[~signal_mask] = 0.0
+
+mass_mean = np.mean(masses)
+mass_std = np.std(masses)
+
+masses = (masses - mass_mean) / mass_std
 
 # # Separate features and labels
 X = df_train.drop(columns = ["label"]).to_numpy()
@@ -101,15 +89,15 @@ scaler = StandardScaler()
 X = scaler.fit_transform(X)
 
 # Save the scaler for later use
-joblib.dump(scaler, "results/scaler_2.pkl")
+joblib.dump(scaler, "results/scaler_adversarial.pkl")
 
 # Split into training and test sets
-X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(
-    X, y, sample_weights, test_size=0.2, random_state=42, shuffle = True
+X_train, X_test, y_train, y_test, mass_train, mass_test = train_test_split(
+    X, y, masses, test_size=0.2, random_state=42, shuffle=True
 )
 
 # Build feed-forward neural network
-model = tf.keras.Sequential([
+classifier = tf.keras.Sequential([
     tf.keras.layers.Input(shape=(X.shape[1],)), # Number of features per event
     tf.keras.layers.Dense(64),                  # First hidden layer with 64 neurons (fully connected)
     tf.keras.layers.LeakyReLU(),                # Activation function: introduces non-linearity; allows small gradient for negative inputs to keep learning
@@ -122,57 +110,57 @@ model = tf.keras.Sequential([
     tf.keras.layers.Dense(1, activation="sigmoid")  # Output layer: 1 neuron, sigmoid activation
 ])                                                  # Outputs a probability between 0 and 1
                                                     # 1 → signal, 0 → background
+adversary = tf.keras.Sequential([
+    tf.keras.layers.Input(shape=(X.shape[1],)),   # takes classifier output
+    tf.keras.layers.Dense(32),
+    tf.keras.layers.ReLU(),
+    tf.keras.layers.Dense(16),
+    tf.keras.layers.ReLU(),
+    tf.keras.layers.Dense(1)             # predicts mass (regression)
+])
 
-model.summary() # Prints a summary of the network: layers, output shapes, and number of parameters
+dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train, mass_train))
+dataset = dataset.shuffle(10000).batch(128)
 
-model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),    # Adam optimizer adjusts weights efficiently; learning_rate controls step size
-    loss="binary_crossentropy", # Loss function for binary classification: measures how far predictions are from true labels
-    metrics=["accuracy",    # Fraction of correctly classified events (threshold 0.5)
-             tf.keras.metrics.AUC(name="auc")] # ROC-AUC: evaluates signal vs background separation across all thresholds 
-)
+bce = tf.keras.losses.BinaryCrossentropy()
+mse = tf.keras.losses.MeanSquaredError()
 
-##############################################################
-# Handling class imbalance (optional for balanced datasets) #
-##############################################################
-#
-# If the number of signal events and background events is very different,
-# the model might become biased toward the majority class. 
-#
-# To address this, you can compute class weights which give more 
-# importance to the minority class during training:
-#
-# from sklearn.utils import class_weight
-# class_weights = class_weight.compute_class_weight(
-#     class_weight='balanced',
-#     classes=np.unique(y_train),
-#     y=y_train
-# )
-# class_weights_dict = dict(enumerate(class_weights))
-#
-# Then, pass these weights to model.fit:
-#
-# model.fit(
-#     X_train, 
-#     y_train, 
-#     epochs=30, 
-#     batch_size=128, 
-#     validation_split=0.2, 
-#     class_weight=class_weights_dict
-# )
+optimizer = tf.keras.optimizers.Adam(0.001)
+adv_optimizer = tf.keras.optimizers.Adam(0.001)
 
-history = model.fit(
-    X_train,                # Training features
-    y_train,
-    sample_weight=w_train,  # Training labels (signal=1, background=0)
-    epochs=30,              # Number of times the model sees the full training data
-    batch_size=128,         # Number of events processed before updating weights
-    validation_split=0.2,   # 20% of training data used to monitor performance (not trained on)
-    verbose=2               # Controls logging: 2 = progress per epoch
-)
+@tf.function
+def train_step(x, y, mass):
+    
+    with tf.GradientTape() as tape:
+        
+        y_pred = classifier(x, training=True)
+        
+        mass_pred = adversary(x, training=True)
 
-model.save("results/electron_classifier_2.h5")
+        class_loss = bce(y, y_pred)
+        adv_loss = mse(mass, mass_pred)
 
-plot_training_history(history, save_path="results/training_plot.png")
+        total_loss = class_loss - 1 * adv_loss
 
-plot_auc(history, save_path="results/auc_plot.png")
+    # gradients
+    grads = tape.gradient(total_loss, classifier.trainable_variables)
+    optimizer.apply_gradients(zip(grads, classifier.trainable_variables))
+
+    # adversary update (separate tape)
+    with tf.GradientTape() as tape2:
+        y_pred = classifier(x, training=True)
+        mass_pred = adversary(x, training=True)
+        adv_loss = mse(mass, mass_pred)
+
+    adv_grads = tape2.gradient(adv_loss, adversary.trainable_variables)
+    adv_optimizer.apply_gradients(zip(adv_grads, adversary.trainable_variables))
+
+    return class_loss, adv_loss
+
+for epoch in range(30):
+    for x_batch, y_batch, mass_batch in dataset:
+        cl, al = train_step(x_batch, y_batch, mass_batch)
+
+    print(f"Epoch {epoch} | class loss {cl.numpy()} | adv loss {al.numpy()}")
+
+classifier.save("results/electron_classifier_adversarial.h5")
