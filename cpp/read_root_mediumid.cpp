@@ -50,12 +50,13 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
     tree->SetBranchStatus("Electron_eInvMinusPInv", true);
     tree->SetBranchStatus("Electron_dxy", true);
     tree->SetBranchStatus("Electron_dr03TkSumPt", true);
-
+    
     tree->SetBranchStatus("nJet", true);
     tree->SetBranchStatus("Jet_pt", true);
     tree->SetBranchStatus("Jet_eta", true);
     tree->SetBranchStatus("Jet_phi", true);
     tree->SetBranchStatus("Jet_btagDeepFlavB", true);
+    tree->SetBranchStatus("Electron_cutBased", true);
     
     UChar_t Electron_genPartFlav[100];
     UInt_t nLHEPart = 0;
@@ -64,8 +65,9 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
     Float_t Electron_sieie[100], MET_phi[100], MET_significance[100], MET_sumEt[100];
     Float_t Electron_hoe[100], Electron_scEtOverPt[100], Electron_miniPFRelIso_all[100];
     Float_t Electron_dz[100], Electron_eInvMinusPInv[100], Electron_dxy[100], Electron_dr03TkSumPt[100];
-
+    
     sumGenWeight = 0.0;
+    Int_t Electron_cutBased[100];   
     Float_t out_genWeight;
     UInt_t nElectron;
     UInt_t nJet;
@@ -116,7 +118,8 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
     tree->SetBranchAddress("Jet_eta", &Jet_eta);
     tree->SetBranchAddress("Jet_phi", &Jet_phi);
     tree->SetBranchAddress("Jet_btagDeepFlavB", &Jet_btagDeepFlavB);
-    
+    tree->SetBranchAddress("Electron_cutBased", &Electron_cutBased);
+
     TFile *outFile = new TFile(outFileName,"RECREATE");
     TTree *outTree = new TTree("Events","Selected branches");
 
@@ -128,7 +131,7 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
         std::filesystem::path p(outNameStr);
 
         string baseName = p.stem().string();     // "mcDYlow"
-        string tauFilePath = "../data/processed/background/" + baseName + "_tau.root";
+        string tauFilePath = "../data/processed/background/" + baseName + "_tau_id.root";
 
         outFile_tau = new TFile(tauFilePath.c_str(), "RECREATE");
         outTree_tau = new TTree("Events","DY tau");
@@ -189,11 +192,13 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
         if (isWJets) {
             vector<int> wjetsElectrons;
 
-            for (UInt_t i = 0; i < nElectron; ++i) {
-                if (Electron_genPartFlav[i] != 1) {
-                    wjetsElectrons.push_back(i);  // keep this "fake"/background electron
+            for (UInt_t i = 0; i < nElectron; ++i){
+            Bool_t isGoodElectron = (Electron_cutBased[i] >= 3 && Electron_genPartFlav[i] != 1);
+                if (isGoodElectron){
+                    wjetsElectrons.push_back(i);
                 }
             }
+
             if(wjetsElectrons.size() < 2) continue;
 
             sort(wjetsElectrons.begin(), wjetsElectrons.end(), [&](int a, int b) {
@@ -228,7 +233,7 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
                             out_Electron_eInvMinusPInv[i] = Electron_eInvMinusPInv[id];
                             out_Electron_dxy[i] = Electron_dxy[id];
                             out_Electron_dr03TkSumPt[i] = Electron_dr03TkSumPt[id];
-                        
+                            
                         }
                         out_MET_phi = MET_phi[0];
                         out_MET_significance = MET_significance[0];
@@ -237,7 +242,7 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
                         if (isMC){ 
                             out_genWeight = genWeight;
                         }
-
+                        
                         for (UInt_t j = 0; j < 4; j++) {
                             if(j < nJet){
                                 out_Jet_pt[j] = Jet_pt[j];
@@ -251,12 +256,12 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
                                 out_Jet_btagDeepFlavB[j] = 0;                
                             }
                         }
-                
+                        
                         outTree->Fill(); 
                     }
-            continue; // skip rest of selection for W+jets events
+                    continue; // skip rest of selection for W+jets events
         }
-
+        
         bool hasTau = false;
         
         if (isDY) {
@@ -273,14 +278,18 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
         }
         vector<int> twoElectrons;
 
-        if (nElectron > 1){
-            
-            for (UInt_t i = 0; i < nElectron; ++i){
-                twoElectrons.push_back(i);
+        for (UInt_t i = 0; i < nElectron; ++i){
+            Bool_t isGoodElectron = (Electron_cutBased[i] >= 3);
+            if (isGoodElectron){
+            twoElectrons.push_back(i);
             }
+        }
+
+        if (twoElectrons.size() > 1){
+
             sort(twoElectrons.begin(), twoElectrons.end(), [&](int a, int b) {
                 return Electron_pt[a] > Electron_pt[b];});
-                
+            
             int idx1 = twoElectrons[0];  // leading
             int idx2 = twoElectrons[1];  // subleading
 
@@ -309,7 +318,7 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
                             out_Electron_miniPFRelIso_all[i] = Electron_miniPFRelIso_all[id];
                             out_Electron_eInvMinusPInv[i] = Electron_eInvMinusPInv[id];
                             out_Electron_dxy[i] = Electron_dxy[id];
-                            out_Electron_dr03TkSumPt[i] = Electron_dr03TkSumPt[id];
+                            out_Electron_dr03TkSumPt[i] = Electron_dr03TkSumPt[id];   
                         }
                         
                         if (isMC){ 
@@ -380,39 +389,29 @@ int main() {
 
     TChain* wjetsTree = createChainFromFileList("../data/raw/background/CMS_mc_RunIISummer20UL16NanoAODv9_WJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-pythia8_NANOAODSIM_106X_mcRun2_asymptotic_v17-v2_2520000_file_index.txt");  
 
-    writeRootFile(tree, "../data/processed/real/real.root", wsum, false, false, false);
+    writeRootFile(tree, "../data/processed/real/real_id.root", wsum, false, false, false);
 
-    writeRootFile(mcTreeHigh, "../data/processed/signal/mcDYhigh.root", wsum, true, true, false);
-    cout << "Wsum for mcTreeHigh: " << wsum << endl;
+    writeRootFile(mcTreeHigh, "../data/processed/signal/mcDYhigh_id.root", wsum, true, true, false);
 
-    writeRootFile(mcTreeLow, "../data/processed/signal/mcDYlow.root", wsum, true, true, false);
-    cout << "Wsum for mcTreeLow: " << wsum << endl;
+    writeRootFile(mcTreeLow, "../data/processed/signal/mcDYlow_id.root", wsum, true, true, false);
 
-    writeRootFile(ttbarTree, "../data/processed/background/ttbar.root", wsum, true, false, false);
-    cout << "Wsum for top-antitop (ttbar): " << wsum << endl;
+    writeRootFile(ttbarTree, "../data/processed/background/ttbar_id.root", wsum, true, false, false);
 
-    writeRootFile(twTree, "../data/processed/background/tW.root", wsum, true, false, false);
-    cout << "Wsum for tW: " << wsum << endl;
+    writeRootFile(twTree, "../data/processed/background/tW_id.root", wsum, true, false, false);
 
-    writeRootFile(awTree, "../data/processed/background/antitopW.root", wsum, true, false, false);
-    cout << "Wsum for antitop W (aw): " << wsum << endl;
+    writeRootFile(awTree, "../data/processed/background/antitopW_id.root", wsum, true, false, false);
 
-    writeRootFile(stTree, "../data/processed/background/singletop.root", wsum, true, false, false);
-    cout << "Wsum for single top (t-channel) (st): " << wsum << endl;
+    writeRootFile(stTree, "../data/processed/background/singletop_id.root", wsum, true, false, false);
 
-    writeRootFile(saTree, "../data/processed/background/sa.root", wsum, true, false, false);
-    cout << "Wsum for single antitop (t-channel) (sa): " << wsum << endl;
+    writeRootFile(saTree, "../data/processed/background/sa_id.root", wsum, true, false, false);
 
-    writeRootFile(zzTree, "../data/processed/background/zz.root", wsum, true, false, false);
-    cout << "Wsum for ZZ: " << wsum << endl;
+    writeRootFile(zzTree, "../data/processed/background/zz_id.root", wsum, true, false, false);
 
-    writeRootFile(wzTree, "../data/processed/background/wz.root", wsum, true, false, false);
-    cout << "Wsum for WZ: " << wsum << endl;
+    writeRootFile(wzTree, "../data/processed/background/wz_id.root", wsum, true, false, false);
 
-    writeRootFile(wwTree, "../data/processed/background/ww.root", wsum, true, false, false);
-    cout << "Wsum for WW: " << wsum << endl;
+    writeRootFile(wwTree, "../data/processed/background/ww_id.root", wsum, true, false, false);
 
-    writeRootFile(wjetsTree, "../data/processed/background/wjets.root", wsum, true, false, true);
+    writeRootFile(wjetsTree, "../data/processed/background/wjets_id.root", wsum, true, false, true);
 
     return 0;
 }
