@@ -36,6 +36,16 @@ ww = load_dataset("data/processed/background/ww.root")
 
 wjets = load_dataset("data/processed/background/wjets.root")
 
+# --- QCD ---
+qcd1 = load_dataset("data/processed/background/qcd1.root")
+qcd2 = load_dataset("data/processed/background/qcd2.root")
+qcd3 = load_dataset("data/processed/background/qcd3.root")
+qcd4 = load_dataset("data/processed/background/qcd4.root")
+qcd5 = load_dataset("data/processed/background/qcd5.root")
+qcd6 = load_dataset("data/processed/background/qcd6.root")
+qcd7 = load_dataset("data/processed/background/qcd7.root")
+qcd8 = load_dataset("data/processed/background/qcd8.root")
+
 df_bkg = pd.concat([
     prepare_training(dy_low_tau, label = 0),
     prepare_training(dy_high_tau, label = 0),
@@ -47,7 +57,15 @@ df_bkg = pd.concat([
     prepare_training(zz, label = 0),
     prepare_training(wz, label = 0),
     prepare_training(ww, label = 0),
-    prepare_training(wjets, label = 0)
+    prepare_training(wjets, label = 0),
+    prepare_training(qcd1, label = 0),
+    prepare_training(qcd2, label = 0),
+    prepare_training(qcd3, label = 0),
+    prepare_training(qcd4, label = 0),
+    prepare_training(qcd5, label = 0),
+    prepare_training(qcd6, label = 0),
+    prepare_training(qcd7, label = 0),
+    prepare_training(qcd8, label = 0)
 ], ignore_index=True)
 
 df_signal = pd.concat([
