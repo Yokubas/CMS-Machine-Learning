@@ -52,9 +52,18 @@ def prepare_input(arr):
                          "miniPFRelIso_all", "eInvMinusPInv"]
     
     for feature in electron_features:
+        # if feature == "pt":
+        #     continue
         padded = ak.pad_none(arr[f"Electron_{feature}"], 2)
         for i in range(2):
             df[f"Electron{i+1}_{feature}"] = ak.to_numpy(ak.fill_none(padded[:, i], 0))
+
+    # padded_pt = ak.pad_none(arr["Electron_pt"], 2)
+
+    # pt1 = ak.to_numpy(ak.fill_none(padded_pt[:, 0], 0))
+    # pt2 = ak.to_numpy(ak.fill_none(padded_pt[:, 1], 0))
+
+    # df["Electron_pt_ratio"] = np.log(pt1/pt2)
 
     jet_features = ["pt", "eta", "phi", "btagDeepFlavB"]
     for feature in jet_features:
@@ -83,9 +92,18 @@ def prepare_training(arr, label):
                          "miniPFRelIso_all", "eInvMinusPInv"]
     
     for feature in electron_features:
+        # if feature == "pt":
+        #     continue
         padded = ak.pad_none(arr[f"Electron_{feature}"], 2)
         for i in range(2):
             df[f"Electron{i+1}_{feature}"] = ak.to_numpy(ak.fill_none(padded[:, i], 0))
+
+    # padded_pt = ak.pad_none(arr["Electron_pt"], 2)
+
+    # pt1 = ak.to_numpy(ak.fill_none(padded_pt[:, 0], 0))
+    # pt2 = ak.to_numpy(ak.fill_none(padded_pt[:, 1], 0))
+
+    # df["Electron_pt_ratio"] = np.log(pt1/pt2)
 
     jet_features = ["pt", "eta", "phi", "btagDeepFlavB"]
     for feature in jet_features:

@@ -84,29 +84,108 @@ masses_signal = np.concatenate([
 bins = np.array([40,45,50,55,60,64,68,72,76,81,86,91,96,101,106,110,
                  115,120,126,133,141,150,160,171,185,200,220,243,273,
                  320,380,440,510,600,700,830,1000,1500,2000,3000])
-indices = np.digitize(masses_signal, bins)
-indices = np.clip(indices, 1, len(bins)-1)
+# background_samples = [
+#     dy_low_tau,
+#     dy_high_tau,
+#     tw,
+#     aw,
+#     st,
+#     sa,
+#     ttbar,
+#     zz,
+#     wz,
+#     ww,
+#     wjets,
+#     qcd1,
+#     qcd2,
+#     qcd3,
+#     qcd4,
+#     qcd5,
+#     qcd6,
+#     qcd7,
+#     qcd8
+# ]
 
-counts = np.bincount(indices, minlength=len(bins)+1)
+# masses_background = []
 
-# avoid division by zero
-counts[counts == 0] = 1
+# for sample in background_samples:
+#     electrons_bkg, _ = build_electrons(sample)
+#     masses_bkg = z_mass_numpy(electrons_bkg)
+#     masses_background.append(masses_bkg)
 
-weights_signal = 1.0 / counts
-weights_signal = weights_signal[indices]
+# masses_background = np.concatenate(masses_background)
+
+# --------------------------------------------------
+# Common mass bins
+# --------------------------------------------------
+
+bins = np.array([
+    40,45,50,55,60,64,68,72,76,81,86,91,96,101,106,110,
+    115,120,126,133,141,150,160,171,185,200,220,243,273,
+    320,380,440,510,600,700,830,1000,1500,2000,3000
+])
+
+# --------------------------------------------------
+# Signal weights (flatten signal)
+# --------------------------------------------------
+
+indices_signal = np.digitize(masses_signal, bins)
+indices_signal = np.clip(indices_signal, 1, len(bins) - 1)
+
+counts_signal = np.bincount(
+    indices_signal,
+    minlength=len(bins) + 1
+)
+
+counts_signal[counts_signal == 0] = 1
+
+weights_signal = 1.0 / np.sqrt(counts_signal)
+weights_signal = weights_signal[indices_signal]
 weights_signal = weights_signal / np.mean(weights_signal)
+
+# --------------------------------------------------
+# Background weights (flatten background too)
+# --------------------------------------------------
+
+# indices_background = np.digitize(masses_background, bins)
+# indices_background = np.clip(indices_background, 1, len(bins) - 1)
+
+# counts_background = np.bincount(
+#     indices_background,
+#     minlength=len(bins) + 1
+# )
+
+# counts_background[counts_background == 0] = 1
+
+# weights_background = 1.0 / np.sqrt(counts_background)
+# weights_background = weights_background[indices_background]
+# weights_background = weights_background / np.mean(weights_background)
+
+# --------------------------------------------------
+# Final training dataframe
+# --------------------------------------------------
 
 df_train = pd.concat([df_signal, df_bkg], ignore_index=True)
 df_train = df_train.replace([np.inf, -np.inf], np.nan)
 df_train = df_train.dropna()
 
-# Start with ones (background gets weight=1)
+# --------------------------------------------------
+# Sample weights for BOTH signal + background
+# --------------------------------------------------
+
 sample_weights = np.ones(len(df_train))
 
-# Apply DY mass weights only to signal rows
 signal_mask = df_train["label"] == 1
-assert len(weights_signal) == signal_mask.sum()  # sanity check
+# background_mask = df_train["label"] == 0
+
+assert len(weights_signal) == signal_mask.sum()
+# assert len(weights_background) == background_mask.sum()
+
 sample_weights[signal_mask] = weights_signal
+# sample_weights[background_mask] = weights_background
+
+# Optional: normalize global weights
+sample_weights = sample_weights / np.mean(sample_weights)
 
 # # Separate features and labels
 X = df_train.drop(columns = ["label"]).to_numpy()
@@ -119,7 +198,7 @@ scaler = StandardScaler()
 X = scaler.fit_transform(X)
 
 # Save the scaler for later use
-joblib.dump(scaler, "results/scaler_2.pkl")
+joblib.dump(scaler, "results/scaler_mass.pkl")
 
 # Split into training and test sets
 X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(
@@ -131,6 +210,7 @@ model = tf.keras.Sequential([
     tf.keras.layers.Input(shape=(X.shape[1],)), # Number of features per event
     tf.keras.layers.Dense(64),                  # First hidden layer with 64 neurons (fully connected)
     tf.keras.layers.LeakyReLU(),                # Activation function: introduces non-linearity; allows small gradient for negative inputs to keep learning
+    tf.keras.layers.Dropout(0.1),
 
     tf.keras.layers.Dense(32),                  # Second hidden layer with 32 neurons
     tf.keras.layers.LeakyReLU(),                # Same as above, helps network learn complex patterns
@@ -144,7 +224,8 @@ model = tf.keras.Sequential([
 model.summary() # Prints a summary of the network: layers, output shapes, and number of parameters
 
 model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),    # Adam optimizer adjusts weights efficiently; learning_rate controls step size
+    # optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),    # Adam optimizer adjusts weights efficiently; learning_rate controls step size
+    optimizer=tf.keras.optimizers.Adam(learning_rate=5e-4),
     loss="binary_crossentropy", # Loss function for binary classification: measures how far predictions are from true labels
     metrics=["accuracy",    # Fraction of correctly classified events (threshold 0.5)
              tf.keras.metrics.AUC(name="auc")] # ROC-AUC: evaluates signal vs background separation across all thresholds 
@@ -189,7 +270,7 @@ history = model.fit(
     verbose=2               # Controls logging: 2 = progress per epoch
 )
 
-model.save("results/electron_classifier_2.h5")
+model.save("results/electron_classifier_mass.h5")
 
 plot_training_history(history, save_path="results/training_plot.png")
 
