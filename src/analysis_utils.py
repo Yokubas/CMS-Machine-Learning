@@ -56,7 +56,6 @@ def prepare_input(arr):
         for i in range(2):
             df[f"Electron{i+1}_{feature}"] = ak.to_numpy(ak.fill_none(padded[:, i], 0))
 
-
     jet_features = ["pt", "eta", "phi", "btagDeepFlavB"]
     for feature in jet_features:
         padded = ak.pad_none(arr[f"Jet_{feature}"], 4)
@@ -82,6 +81,7 @@ def prepare_training(arr, label):
     electron_features = ["pt", "eta", "phi", "sieie", "hoe", 
                          "dz", "dxy", "dr03TkSumPt", "scEtOverPt", 
                          "miniPFRelIso_all", "eInvMinusPInv"]
+    
     for feature in electron_features:
         padded = ak.pad_none(arr[f"Electron_{feature}"], 2)
         for i in range(2):
@@ -125,3 +125,134 @@ def apply_nn(events, model, scaler, threshold):
     y_pred = model.predict(X_scaled, batch_size=1024)
     mask = y_pred.flatten() > threshold
     return events[mask]
+
+def plot_data_vs_mc(
+    data_values,
+    mc_stack,
+    bins,
+    title,
+    ratio_ylim=(0.5, 1.5),
+    figsize=(8, 8),
+):
+   
+    # --- Data histogram ---
+    real_entries, edges = np.histogram(data_values, bins=bins)
+
+    # --- MC stack preparation ---
+    masses = [s["mass"] for s in mc_stack]
+    weights = [s["weights"] for s in mc_stack]
+    labels = [s["label"] for s in mc_stack]
+
+    mc_entries = np.array([
+        np.histogram(
+            sample["mass"],
+            bins=bins,
+            weights=sample["weights"]
+        )[0]
+        for sample in mc_stack
+    ])
+
+    mc_total_entries = np.abs(np.sum(mc_entries, axis=0))
+
+    bin_centers = 0.5 * (edges[:-1] + edges[1:])
+
+    # Avoid divide-by-zero
+    ratio = np.divide(
+        real_entries,
+        mc_total_entries,
+        out=np.zeros_like(real_entries, dtype=float),
+        where=mc_total_entries != 0
+    )
+
+    ratio_err = np.divide(
+        np.sqrt(real_entries),
+        mc_total_entries,
+        out=np.zeros_like(real_entries, dtype=float),
+        where=mc_total_entries != 0
+    )
+
+    # --- Figure ---
+    fig, (ax, rax) = plt.subplots(
+        2,
+        1,
+        figsize=figsize,
+        gridspec_kw={"height_ratios": [7, 2]},
+        sharex=True
+    )
+
+    # --- Main plot ---
+    ax.hist(
+        masses,
+        bins=bins,
+        weights=weights,
+        stacked=True,
+        label=labels,
+        zorder=10
+    )
+
+    ax.errorbar(
+        bin_centers,
+        real_entries,
+        yerr=np.sqrt(real_entries),
+        fmt="o",
+        color="black",
+        markersize=3,
+        linewidth=1,
+        label="Data",
+        zorder=10
+    )
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_ylabel("Counts")
+
+    ax.minorticks_on()
+    ax.tick_params(
+        which="both",
+        direction="in",
+        top=True,
+        right=True,
+        bottom=True,
+        left=True
+    )
+
+    ax.grid(which="minor", axis="x", linestyle=":")
+    ax.grid(which="major", linestyle=":")
+    ax.legend()
+    ax.set_title(title)
+    # --- Ratio plot ---
+    rax.errorbar(
+        bin_centers,
+        ratio,
+        yerr=ratio_err,
+        fmt="o",
+        color="black",
+        markersize=3,
+        linewidth=1,
+        capsize=2
+    )
+
+    rax.axhline(1.0, lw=0.5, color="k")
+
+    rax.minorticks_on()
+    rax.tick_params(
+        which="both",
+        direction="in",
+        top=True,
+        right=True,
+        bottom=True,
+        left=True
+    )
+
+    rax.grid(which="minor", axis="x", linestyle=":")
+    rax.grid(which="major", linestyle=":")
+
+    rax.set_ylabel("Data / Pred.")
+    rax.set_xlabel("Mass [GeV]")
+    rax.set_xscale("log")
+    rax.set_ylim(*ratio_ylim)
+    rax.set_xlim(bins[0] - 10, bins[-1] + 1000)
+
+    plt.tight_layout()
+
+    return fig, (ax, rax)

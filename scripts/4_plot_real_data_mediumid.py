@@ -3,7 +3,8 @@ from src.analysis_utils import (
     build_electrons,
     z_mass_numpy,
     process_mc,
-    apply_nn
+    apply_nn,
+    plot_data_vs_mc
 )
 import awkward as ak
 import numpy as np
@@ -104,35 +105,14 @@ mc_stack = [
 
 events_real = load_dataset(real_data)
 electrons_real, _ = build_electrons(events_real)
+data_values = z_mass_numpy(electrons_real)
 
-plt.figure(figsize=(7,5))
-
-masses = [s["mass"] for s in mc_stack]
-weights = [s["weights"] for s in mc_stack]
-labels = [s["label"] for s in mc_stack]
-
-# real data
-plt.hist(
-    z_mass_numpy(electrons_real),
+plot_data_vs_mc(
+    data_values=data_values,
+    mc_stack=mc_stack,
     bins=bins,
-    histtype="step",
-    color="black",
-    label="Data"
+    title = "Before NN selection with mediumID"
 )
-
-plt.hist(
-    masses,
-    bins=bins,
-    weights=weights,
-    stacked=True,
-    label=labels
-)
-
-plt.xscale("log")
-plt.yscale("log")
-plt.legend()
-plt.title("Before NN selection")
-
 plt.savefig("results/stack_before_nn_id.png")
 plt.show()
 
@@ -211,34 +191,11 @@ mc_stack_nn = [
     dy_total_nn
 ]
 
-plt.figure(figsize=(7,5))
-
-masses_nn = [s["mass"] for s in mc_stack_nn]
-weights_nn = [s["weights"] for s in mc_stack_nn]
-labels_nn = [s["label"] for s in mc_stack_nn]
-
-# data
-plt.hist(
-    mass_real_nn,
+plot_data_vs_mc(
+    data_values=mass_real_nn,
+    mc_stack=mc_stack_nn,
     bins=bins,
-    histtype="step",
-    color="black",
-    label="Data (NN)"
+    title = "After NN selection with mediumID [Default]"
 )
-
-# MC stack
-plt.hist(
-    masses_nn,
-    bins=bins,
-    weights=weights_nn,
-    stacked=True,
-    label=labels_nn
-)
-
-plt.xscale("log")
-plt.yscale("log")
-plt.legend()
-plt.title("After NN selection")
-
-plt.savefig("results/stack_after_nn_id.png")
+plt.savefig("results/stack_after_nn_id_default.png")
 plt.show()

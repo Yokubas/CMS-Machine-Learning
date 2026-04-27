@@ -259,7 +259,7 @@ void writeRootFile(TTree* tree, const char* outFileName, double& sumGenWeight, b
                         
                         outTree->Fill(); 
                     }
-                    continue; // skip rest of selection for W+jets events
+                continue; // skip rest of selection for W+jets events
         }
         
         bool hasTau = false;
