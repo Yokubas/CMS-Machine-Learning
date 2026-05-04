@@ -23,23 +23,23 @@ scaler = joblib.load("results/scaler_mass.pkl")
 # Using processed data files
 real_data = "data/processed/real/real.root"
 
-mc_dy_high_data = "data/processed/signal/mcDYhigh.root"
-mc_dy_low_data = "data/processed/signal/mcDYlow.root"
+mc_dy_high_data = "data/processed/plot/signal/mcDYhigh.root"
+mc_dy_low_data = "data/processed/plot/signal/mcDYlow.root"
 
 total_events = 85388673 
 entry = 843234
 
-wsumHigh = 3.2887e+10
-wsumLow = 8.26117e+10
+wsumHigh = 3.28208e+10
+wsumLow = 5.40678e+10
 
-wsum_ttbar = 6.69266e+09
-wsum_tw = 5.10478e+07
-wsum_aw = 2.98974e+07
-wsum_st = 5.97701e+08
-wsum_sa = 1.45713e+08
-wsum_zz = 71000
-wsum_wz = 2.127e+06
-wsum_ww = 3.61803e+06
+wsum_ttbar = 9.39161e+09
+wsum_tw = 4.29882e+07
+wsum_aw = 7.89362e+07
+wsum_st = 3.71476e+08
+wsum_sa = 2.26223e+08
+wsum_zz = 393000
+wsum_wz = 19000
+wsum_ww = 1.44701e+06
 
 L_int = 8746231868.215154648 / 1e6; # pb^-1
 
@@ -69,8 +69,8 @@ dy_total = {
 }
 
 # --- DY tau total ---
-dy_low_tau = process_mc("data/processed/background/mcDYlow_tau.root", sigmaDYlow, wsumLow, "DY low tau")
-dy_high_tau = process_mc("data/processed/background/mcDYhigh_tau.root", sigmaDYhigh, wsumHigh, "DY high tau")
+dy_low_tau = process_mc("data/processed/plot/background/mcDYlow_tau.root", sigmaDYlow, wsumLow, "DY low tau")
+dy_high_tau = process_mc("data/processed/plot/background/mcDYhigh_tau.root", sigmaDYhigh, wsumHigh, "DY high tau")
 
 dy_tau_total = {
     "mass": np.concatenate([dy_low_tau["mass"], dy_high_tau["mass"]]),
@@ -79,10 +79,10 @@ dy_tau_total = {
 }
 
 # --- Single top total ---
-tw = process_mc("data/processed/background/tW.root", sigma_tw, wsum_tw, "tW")
-aw = process_mc("data/processed/background/antitopW.root", sigma_aw, wsum_aw, "tWbar")
-st = process_mc("data/processed/background/singletop.root", sigma_st, wsum_st, "st")
-sa = process_mc("data/processed/background/sa.root", sigma_sa, wsum_sa, "sa")
+tw = process_mc("data/processed/plot/background/tW.root", sigma_tw, wsum_tw, "tW")
+aw = process_mc("data/processed/plot/background/antitopW.root", sigma_aw, wsum_aw, "tWbar")
+st = process_mc("data/processed/plot/background/singletop.root", sigma_st, wsum_st, "st")
+sa = process_mc("data/processed/plot/background/sa.root", sigma_sa, wsum_sa, "sa")
 
 single_top = {
     "mass": np.concatenate([tw["mass"], aw["mass"], st["mass"], sa["mass"]]),
@@ -91,12 +91,12 @@ single_top = {
 }
 
 # --- TTbar ---
-ttbar = process_mc("data/processed/background/ttbar.root", sigma_ttbar, wsum_ttbar, r"$t\bar{t}$")
+ttbar = process_mc("data/processed/plot/background/ttbar.root", sigma_ttbar, wsum_ttbar, r"$t\bar{t}$")
 
 # --- Diboson ---
-zz = process_mc("data/processed/background/zz.root", sigma_zz, wsum_zz, "ZZ")
-wz = process_mc("data/processed/background/wz.root", sigma_wz, wsum_wz, "WZ")
-ww = process_mc("data/processed/background/ww.root", sigma_ww, wsum_ww, "WW")
+zz = process_mc("data/processed/plot/background/zz.root", sigma_zz, wsum_zz, "ZZ")
+wz = process_mc("data/processed/plot/background/wz.root", sigma_wz, wsum_wz, "WZ")
+ww = process_mc("data/processed/plot/background/ww.root", sigma_ww, wsum_ww, "WW")
 
 mc_stack = [
     ww,
@@ -144,11 +144,11 @@ dy_total_nn = {
 }
 
 # --- DY tau tau ---
-dy_low_tau_nn = process_mc("data/processed/background/mcDYlow_tau.root", sigmaDYlow, wsumLow,
+dy_low_tau_nn = process_mc("data/processed/plot/background/mcDYlow_tau.root", sigmaDYlow, wsumLow,
                            r"DY $\rightarrow \tau \tau$",
                            apply_nn_flag=True, model=model, scaler=scaler, threshold=threshold)
 
-dy_high_tau_nn = process_mc("data/processed/background/mcDYhigh_tau.root", sigmaDYhigh, wsumHigh,
+dy_high_tau_nn = process_mc("data/processed/plot/background/mcDYhigh_tau.root", sigmaDYhigh, wsumHigh,
                             r"DY $\rightarrow \tau \tau$",
                             apply_nn_flag=True, model=model, scaler=scaler, threshold=threshold)
 
@@ -158,13 +158,13 @@ dy_tau_total_nn = {
     "label": r"DY $\rightarrow \tau \tau$"
 }
 
-tw_nn = process_mc("data/processed/background/tW.root", sigma_tw, wsum_tw,
+tw_nn = process_mc("data/processed/plot/background/tW.root", sigma_tw, wsum_tw,
                    "tW", True, model, scaler, threshold)
-aw_nn = process_mc("data/processed/background/antitopW.root", sigma_aw, wsum_aw,
+aw_nn = process_mc("data/processed/plot/background/antitopW.root", sigma_aw, wsum_aw,
                    "tWbar", True, model, scaler, threshold)
-st_nn = process_mc("data/processed/background/singletop.root", sigma_st, wsum_st,
+st_nn = process_mc("data/processed/plot/background/singletop.root", sigma_st, wsum_st,
                    "st", True, model, scaler, threshold)
-sa_nn = process_mc("data/processed/background/sa.root", sigma_sa, wsum_sa,
+sa_nn = process_mc("data/processed/plot/background/sa.root", sigma_sa, wsum_sa,
                    "sa", True, model, scaler, threshold)
 
 single_top_nn = {
@@ -173,17 +173,17 @@ single_top_nn = {
     "label": "Single Top"
 }
 
-ttbar_nn = process_mc("data/processed/background/ttbar.root",
+ttbar_nn = process_mc("data/processed/plot/background/ttbar.root",
                       sigma_ttbar, wsum_ttbar,
                       r"$t\bar{t}$", True, model, scaler, threshold)
 
-zz_nn = process_mc("data/processed/background/zz.root",
+zz_nn = process_mc("data/processed/plot/background/zz.root",
                    sigma_zz, wsum_zz, "ZZ", True, model, scaler, threshold)
 
-wz_nn = process_mc("data/processed/background/wz.root",
+wz_nn = process_mc("data/processed/plot/background/wz.root",
                    sigma_wz, wsum_wz, "WZ", True, model, scaler, threshold)
 
-ww_nn = process_mc("data/processed/background/ww.root",
+ww_nn = process_mc("data/processed/plot/background/ww.root",
                    sigma_ww, wsum_ww, "WW", True, model, scaler, threshold)
 
 mc_stack_nn = [
