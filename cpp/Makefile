@@ -18,7 +18,12 @@ read_root_mediumid: read_root_mediumid.cpp
 	$(CC) $(CFLAGS) -o read_root_mediumid.o read_root_mediumid.cpp
 	$(CC) -o read_root_mediumid read_root_mediumid.o $(LDFLAGS)
 
+read_root_for_plot: read_root_for_plot.cpp
+	$(CC) $(CFLAGS) -o read_root_for_plot.o read_root_for_plot.cpp
+	$(CC) -o read_root_for_plot read_root_for_plot.o $(LDFLAGS)
+
 clean:
 	rm -f ./*~ ./*.o ./read_root
 	rm -f ./*~ ./*.o ./getEntry
 	rm -f ./*~ ./*.o ./read_root_mediumid
+	rm -f ./*~ ./*.o ./read_root_for_plot
