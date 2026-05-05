@@ -40,7 +40,7 @@ $
 w_{\text{QCD}} = 10
 $
 
-### 4. Old NN, no photon feature inputs
+### 4. Older NN model
 
 ![Second plot](stack_after_nn_2.png)
 
@@ -94,7 +94,7 @@ $
 w_{\text{QCD}} = 10
 $
 
-### 4. Old NN, no photon feature inputs
+### 4. Older NN model
 
 
 ![Third plot](stack_after_nn_3.png)
@@ -150,7 +150,7 @@ $
 
 ### 4. Model of NN was changed for this plot, previous plots uses older NN model.
 
-Changed number of neurons in each layer, added dropout function. In addition photon features were added into this new NN, previously used NN was not trained with Photon feature inputs.
+Changed number of neurons in each layer, added dropout function.
 
 ![Fourth plot](stack_after_nn_4.png)
 
