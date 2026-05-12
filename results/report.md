@@ -168,7 +168,7 @@ To evaluate the performance of the neural network classifier, its results are co
 
     Purity is defined as the fraction of selected events that are true signal:
     
-    $Efficiency = \frac{N_{signal, \ selected}}{N_{signal, \ selected} \ + \  N_{background, \ selected}}$ 
+    $Purity = \frac{N_{signal, \ selected}}{N_{signal, \ selected} \ + \  N_{background, \ selected}}$ 
     
     It measures how clean the selected sample is in terms of signal content. High purity means low background contamination.
 
