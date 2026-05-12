@@ -177,7 +177,7 @@ qcd8_mask = df_train["process"] == "qcd8"
 
 
 sample_weights[signal_mask] = weights_signal
-weight = 5
+weight = 10
 # upweight QCD strongly
 sample_weights[qcd1_mask] *= weight
 sample_weights[qcd2_mask] *= weight
@@ -266,7 +266,7 @@ model = tf.keras.Sequential([
 #     tf.keras.layers.LeakyReLU(),
 #     tf.keras.layers.Dropout(0.2),
 
-#     tf.keras.layers.Dense(12),
+#     tf.keras.layers.Dense(16),
 #     tf.keras.layers.LeakyReLU(),
 
 #     tf.keras.layers.Dense(1, activation="sigmoid")

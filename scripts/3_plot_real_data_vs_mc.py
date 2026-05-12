@@ -68,61 +68,61 @@ dy_total = {
     "label": r"DY $\rightarrow e^+ e^-$"
 }
 
-# --- DY tau total ---
-dy_low_tau = process_mc("data/processed/plot/background/mcDYlow_tau.root", sigmaDYlow, wsumLow, "DY low tau")
-dy_high_tau = process_mc("data/processed/plot/background/mcDYhigh_tau.root", sigmaDYhigh, wsumHigh, "DY high tau")
+# # --- DY tau total ---
+# dy_low_tau = process_mc("data/processed/plot/background/mcDYlow_tau.root", sigmaDYlow, wsumLow, "DY low tau")
+# dy_high_tau = process_mc("data/processed/plot/background/mcDYhigh_tau.root", sigmaDYhigh, wsumHigh, "DY high tau")
 
-dy_tau_total = {
-    "mass": np.concatenate([dy_low_tau["mass"], dy_high_tau["mass"]]),
-    "weights": np.concatenate([dy_low_tau["weights"], dy_high_tau["weights"]]),
-    "label": r"DY $\rightarrow \tau \tau$"
-}
+# dy_tau_total = {
+#     "mass": np.concatenate([dy_low_tau["mass"], dy_high_tau["mass"]]),
+#     "weights": np.concatenate([dy_low_tau["weights"], dy_high_tau["weights"]]),
+#     "label": r"DY $\rightarrow \tau \tau$"
+# }
 
-# --- Single top total ---
-tw = process_mc("data/processed/plot/background/tW.root", sigma_tw, wsum_tw, "tW")
-aw = process_mc("data/processed/plot/background/antitopW.root", sigma_aw, wsum_aw, "tWbar")
-st = process_mc("data/processed/plot/background/singletop.root", sigma_st, wsum_st, "st")
-sa = process_mc("data/processed/plot/background/sa.root", sigma_sa, wsum_sa, "sa")
+# # --- Single top total ---
+# tw = process_mc("data/processed/plot/background/tW.root", sigma_tw, wsum_tw, "tW")
+# aw = process_mc("data/processed/plot/background/antitopW.root", sigma_aw, wsum_aw, "tWbar")
+# st = process_mc("data/processed/plot/background/singletop.root", sigma_st, wsum_st, "st")
+# sa = process_mc("data/processed/plot/background/sa.root", sigma_sa, wsum_sa, "sa")
 
-single_top = {
-    "mass": np.concatenate([tw["mass"], aw["mass"], st["mass"], sa["mass"]]),
-    "weights": np.concatenate([tw["weights"], aw["weights"], st["weights"], sa["weights"]]),
-    "label": "Single Top"
-}
+# single_top = {
+#     "mass": np.concatenate([tw["mass"], aw["mass"], st["mass"], sa["mass"]]),
+#     "weights": np.concatenate([tw["weights"], aw["weights"], st["weights"], sa["weights"]]),
+#     "label": "Single Top"
+# }
 
-# --- TTbar ---
-ttbar = process_mc("data/processed/plot/background/ttbar.root", sigma_ttbar, wsum_ttbar, r"$t\bar{t}$")
+# # --- TTbar ---
+# ttbar = process_mc("data/processed/plot/background/ttbar.root", sigma_ttbar, wsum_ttbar, r"$t\bar{t}$")
 
-# --- Diboson ---
-zz = process_mc("data/processed/plot/background/zz.root", sigma_zz, wsum_zz, "ZZ")
-wz = process_mc("data/processed/plot/background/wz.root", sigma_wz, wsum_wz, "WZ")
-ww = process_mc("data/processed/plot/background/ww.root", sigma_ww, wsum_ww, "WW")
+# # --- Diboson ---
+# zz = process_mc("data/processed/plot/background/zz.root", sigma_zz, wsum_zz, "ZZ")
+# wz = process_mc("data/processed/plot/background/wz.root", sigma_wz, wsum_wz, "WZ")
+# ww = process_mc("data/processed/plot/background/ww.root", sigma_ww, wsum_ww, "WW")
 
-mc_stack = [
-    ww,
-    wz,
-    zz,
-    single_top,
-    ttbar,
-    dy_tau_total,
-    dy_total
-]
+# mc_stack = [
+#     ww,
+#     wz,
+#     zz,
+#     single_top,
+#     ttbar,
+#     dy_tau_total,
+#     dy_total
+# ]
 
 events_real = load_dataset(real_data)
 electrons_real, _ = build_electrons(events_real)
 data_values = z_mass_numpy(electrons_real)
 
-plot_data_vs_mc(
-    data_values=data_values,
-    mc_stack=mc_stack,
-    bins=bins,
-    title = "Before NN selection"
-)
-plt.savefig("results/stack_before_nn.png")
-plt.show()
+# plot_data_vs_mc(
+#     data_values=data_values,
+#     mc_stack=mc_stack,
+#     bins=bins,
+#     title = "Before NN selection"
+# )
+# plt.savefig("results/stack_before_nn.png")
+# plt.show()
 
 # Real vs MC after NN selection
-threshold = 0.7
+threshold = 0.65
 
 events_real_nn = apply_nn(events_real, model=model, scaler=scaler, threshold=threshold)
 electrons_real_nn, _ = build_electrons(events_real_nn)
@@ -205,3 +205,316 @@ plot_data_vs_mc(
 )
 plt.savefig("results/stack_after_nn_mass.png")
 plt.show()
+
+# Signal efficiency NN
+
+# Signal NN
+signal_mass = dy_total_nn["mass"]
+signal_weights = dy_total_nn["weights"]
+
+# Histogram counts per bin
+after, _ = np.histogram(signal_mass, bins=bins, weights=signal_weights)
+before, _ = np.histogram(dy_total["mass"], bins=bins, weights=dy_total["weights"])
+
+after = np.asarray(after)
+before = np.asarray(before)
+
+ratio = np.zeros_like(after, dtype=float)
+
+mask = (after > 0) & (before > 0)
+ratio[mask] = after[mask] / before[mask]
+
+# Bin centers
+bin_centers = 0.5 * (bins[:-1] + bins[1:])
+
+# Plot
+fig, ax = plt.subplots(figsize=(10,6))
+
+ax.scatter(
+    bin_centers,
+    ratio,
+    zorder=10,
+    color="g",
+    s=25
+)
+
+ax.set_xlabel("Mass [GeV]")
+ax.set_ylabel(r"Signal efficiency")
+ax.set_title("Signal Efficiency per Mass Bin [NN]")
+
+ax.set_xscale("log")
+
+# Ticks
+ax.minorticks_on()
+
+ax.tick_params(
+    which="both",
+    direction="in",
+    top=True,
+    right=True,
+    bottom=True,
+    left=True
+)
+
+# Grids
+ax.grid(which="minor", axis="x", linestyle=":")
+ax.grid(which="major", axis="both", linestyle=":")
+
+# Limits
+ax.set_ylim(0, 1.05)
+ax.set_xlim(bins[0] - 1, bins[-1] + 500)
+
+plt.savefig("results/efficiency_per_bin_nn.png")
+plt.show()
+
+# Signal efficiency mediumID
+
+# Histogram counts per bin
+after = np.array([39.4188,
+    58.5496,
+    106.529,
+    194.236,
+    189.113,
+    236.925,
+    327.426,
+    443.968,
+    1025.39,
+    3281.09,
+    16130.1,
+    12823.4,
+    1708.85,
+    519.528,
+    216.434,
+    198.078,
+    101.173,
+    117.822,
+    91.7818,
+    70.4372,
+    72.9985,
+    46.1043,
+    40.5547,
+    33.7245,
+    27.3211,
+    27.3211,
+    24.7597,
+    18.7832,
+    17.0757,
+    10.2454,
+    4.69581,
+    5.1227,
+    1.28068,
+    1.28068,
+    1.28068,
+    0.426892,
+    0.0,
+    0.0,
+    0.0])
+before, _ = np.histogram(dy_total["mass"], bins=bins, weights=dy_total["weights"])
+
+before = np.asarray(before)
+
+ratio = np.zeros_like(after, dtype=float)
+
+mask = (after > 0) & (before > 0)
+ratio[mask] = after[mask] / before[mask]
+
+# Bin centers
+bin_centers = 0.5 * (bins[:-1] + bins[1:])
+
+# Plot
+fig, ax = plt.subplots(figsize=(10,6))
+
+ax.scatter(
+    bin_centers,
+    ratio,
+    zorder=10,
+    color="purple",
+    s=25
+)
+
+ax.set_xlabel("Mass [GeV]")
+ax.set_ylabel(r"Signal efficiency")
+ax.set_title("Signal Efficiency per Mass Bin [MediumID]")
+
+ax.set_xscale("log")
+
+# Ticks
+ax.minorticks_on()
+
+ax.tick_params(
+    which="both",
+    direction="in",
+    top=True,
+    right=True,
+    bottom=True,
+    left=True
+)
+
+# Grids
+ax.grid(which="minor", axis="x", linestyle=":")
+ax.grid(which="major", axis="both", linestyle=":")
+
+# Limits
+ax.set_ylim(0, 1.05)
+ax.set_xlim(bins[0] - 1, bins[-1] + 500)
+
+plt.savefig("results/efficiency_per_bin_mediumid.png")
+plt.show()
+
+# --- Signal purity per bin ---
+
+
+# Backgrounds combined
+background_mass = np.concatenate([
+    dy_tau_total_nn["mass"],
+    single_top_nn["mass"],
+    ttbar_nn["mass"],
+    zz_nn["mass"],
+    wz_nn["mass"],
+    ww_nn["mass"]
+])
+
+background_weights = np.concatenate([
+    dy_tau_total_nn["weights"],
+    single_top_nn["weights"],
+    ttbar_nn["weights"],
+    zz_nn["weights"],
+    wz_nn["weights"],
+    ww_nn["weights"]
+])
+
+# Histogram counts per bin
+S, _ = np.histogram(signal_mass, bins=bins, weights=signal_weights)
+B, _ = np.histogram(background_mass, bins=bins, weights=background_weights)
+
+# Purity
+S = np.asarray(S)
+B = np.asarray(B)
+
+purity = np.zeros_like(S, dtype=float)
+
+mask = (S + B) > 0
+purity[mask] = S[mask] / (S[mask] + B[mask])
+
+# Bin centers
+bin_centers = 0.5 * (bins[:-1] + bins[1:])
+
+# Plot
+fig, ax = plt.subplots(figsize=(10,6))
+
+ax.scatter(
+    bin_centers,
+    purity,
+    zorder=10,
+    color="b",
+    s=25
+)
+
+ax.set_xlabel("Mass [GeV]")
+ax.set_ylabel(r"Signal Purity $\frac{S}{S+B}$")
+ax.set_title("Signal Purity per Mass Bin [NN]")
+
+ax.set_xscale("log")
+
+# Ticks
+ax.minorticks_on()
+
+ax.tick_params(
+    which="both",
+    direction="in",
+    top=True,
+    right=True,
+    bottom=True,
+    left=True
+)
+
+# Grids
+ax.grid(which="minor", axis="x", linestyle=":")
+ax.grid(which="major", axis="both", linestyle=":")
+
+# Limits
+ax.set_ylim(0, 1.05)
+ax.set_xlim(bins[0] - 1, bins[-1] + 500)
+
+plt.savefig("results/purity_per_bin_nn.png")
+plt.show()
+
+fig, ax = plt.subplots(figsize=(10,6))
+
+purity_id = [0.857734,
+    0.842421,
+    0.845538,
+    0.885515,
+    0.892241,
+    0.912199,
+    0.952657,
+    0.966723,
+    0.979724,
+    0.994012,
+    0.998192,
+    0.99807,
+    0.991719,
+    0.9812,
+    0.961452,
+    0.941007,
+    0.906344,
+    0.908421,
+    0.878281,
+    0.857765,
+    0.841508,
+    0.792794,
+    0.780662,
+    0.73625,
+    0.725002,
+    0.684284,
+    0.705709,
+    0.69203,
+    0.661272,
+    0.65245,
+    0.705707,
+    0.765442,
+    0.532284,
+    0.711554,
+    0.783537,
+    0.88015,
+    0.0,
+    0.0,
+    0.0]
+
+ax.scatter(
+    bin_centers,
+    purity_id,
+    zorder=10,
+    color="r",
+    s=25
+)
+
+ax.set_xlabel("Mass [GeV]")
+ax.set_ylabel(r"Signal Purity $\frac{S}{S+B}$")
+ax.set_title("Signal Purity per Mass Bin [MediumID]")
+
+ax.set_xscale("log")
+
+# Ticks
+ax.minorticks_on()
+
+ax.tick_params(
+    which="both",
+    direction="in",
+    top=True,
+    right=True,
+    bottom=True,
+    left=True
+)
+
+# Grids
+ax.grid(which="minor", axis="x", linestyle=":")
+ax.grid(which="major", axis="both", linestyle=":")
+
+# Limits
+ax.set_ylim(0, 1.05)
+ax.set_xlim(bins[0] - 1, bins[-1] + 500)
+
+plt.savefig("results/purity_per_bin_mediumid.png")
+plt.show()
+
