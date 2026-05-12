@@ -23,7 +23,7 @@ CMS Run II Ultra Legacy (2016H), reconstructed in MiniAODv2 and processed to Nan
 
 The following Standard Model background processes are included:
 
-- **Top quark pair production (tt̄)**
+- **Top quark pair production ($t\overline{t}$)**
     - Dataset: [CMS Open Data record 67731](https://opendata.cern.ch/record/67731)
 - **Single top production**
     - tW channel (top + W)
@@ -49,7 +49,7 @@ The following Standard Model background processes are included:
 In this work, a physics-driven feature preparation pipeline was implemented using ROOT-based analysis of NanoAOD data. The goal was to construct fixed-size, machine-learning-ready event representations for a neural network classifier.
 
 ### Event Topology Selection
-Events are required to contain at least two electrons, which are then sorted by transverse momentum and reduced to a fixed two-electron system (leading and subleading electrons). This defines a dilepton event topology, consistent with processes such as Drell–Yan (DY → e⁺e⁻).
+Events are required to contain at least two electrons, which are then sorted by transverse momentum and reduced to a fixed two-electron system (leading and subleading electrons). This defines a dilepton event topology, consistent with processes such as Drell–Yan (DY $\rightarrow$ $e^+e^-$).
 
 ### Kinematic and Acceptance Cuts
 A set of standard CMS-inspired selection criteria is applied:
@@ -118,7 +118,7 @@ The neural network is implemented using TensorFlow/Keras and has the following s
 ### Training Setup
 The model is trained as a binary classifier using:
 - Loss function: binary cross-entropy
-- Optimizer: Adam (learning rate = 5 × 10⁻⁴)
+- Optimizer: Adam (learning rate = 5 $\times$ 10$^{-4}$)
 - Metrics: accuracy and ROC-AUC
 - Batch size: 128
 - Epochs: 30
@@ -181,7 +181,9 @@ This is reference distribution for both methods.
 
 #### 4.2 Cut-Based Selection (C++ Analysis)
 A traditional physics-driven selection is applied using fixed kinematic and object-level cuts implemented in C++. The plot is shown below:
+
 ![cpp](stack_mediumid.png)
+
 **Event Selection Requirements**
 
 Events are required to satisfy:
@@ -189,7 +191,7 @@ Events are required to satisfy:
     - `HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ`
 - At least two reconstructed electrons
 - Electron identification
-    - Medium cut-based electron ID (`cutBased ≥ 3`)
+    - Medium cut-based electron ID (cutBased $\geq$ 3)
 - Isolation requirement
     - Relative isolation: `pfRelIso03_all < 0.15`
 - Opposite-sign electron pair
